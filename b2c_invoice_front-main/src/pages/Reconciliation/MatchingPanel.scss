@@ -1,0 +1,283 @@
+/* Matching Panel — table columns, row states, badges, and inline actions */
+
+/* Search bar */
+.matching-panel__search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    max-width: 360px;
+    background: var(--bg-hover, #f8fafc);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 8px;
+    padding: 6px 12px;
+    transition: border-color 0.2s;
+
+    &:focus-within {
+        border-color: var(--primary-color, #3b82f6);
+        background: #fff;
+    }
+
+    svg {
+        width: 16px;
+        height: 16px;
+        color: var(--text-muted, #94a3b8);
+        flex-shrink: 0;
+    }
+}
+
+.matching-panel__search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 13px;
+    color: var(--text-primary, #1e293b);
+
+    &::placeholder {
+        color: var(--text-muted, #94a3b8);
+    }
+}
+
+.matching-panel__search-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 50%;
+    background: var(--border-color, #e2e8f0);
+    color: var(--text-secondary, #64748b);
+    font-size: 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    &:hover {
+        background: var(--text-muted, #94a3b8);
+        color: #fff;
+    }
+}
+
+/* Matching columns */
+.matching-col {
+    &--date { width: 90px; }
+    &--desc { min-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    &--type { width: 70px; }
+    &--amount { width: 110px; text-align: right; font-variant-numeric: tabular-nums; }
+    &--expense { min-width: 140px; }
+    &--income { min-width: 140px; }
+    &--doc { min-width: 140px; }
+    &--status { width: 100px; text-align: center; }
+    &--actions { width: 80px; text-align: center; }
+
+}
+
+/* Draggable column divider */
+.matching-panel__divider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 9px;
+    margin-left: -4px;
+    cursor: col-resize;
+    z-index: 3;
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 4px;
+        width: 2px;
+        background: var(--border-color, #e2e8f0);
+        transition: background 0.15s;
+    }
+
+    &:hover::after,
+    &:active::after {
+        background: var(--primary-color, #3b82f6);
+    }
+}
+
+/* Right-side header columns — subtle background tint */
+.matching-panel__table thead tr {
+    th.matching-col--doc,
+    th.matching-col--status,
+    th.matching-col--actions {
+        background: rgba(59, 130, 246, 0.04);
+    }
+}
+
+/* Row states */
+.matching-row {
+    &--matched {
+        background: rgba(22, 163, 74, 0.04);
+    }
+    &--unmatched {
+        background: rgba(217, 119, 6, 0.04);
+    }
+    &--partial {
+        background: rgba(59, 130, 246, 0.04);
+    }
+    &--clickable:hover {
+        background: rgba(22, 163, 74, 0.1);
+    }
+}
+
+/* Type badge */
+.matching-type-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+
+    &--debit {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+    }
+    &--credit {
+        background: rgba(22, 163, 74, 0.1);
+        color: #16a34a;
+    }
+}
+
+/* Doc badge */
+.matching-doc-badge {
+    display: inline-block;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 2px 8px;
+    background: rgba(22, 163, 74, 0.08);
+    border-radius: 4px;
+    font-size: 12px;
+    color: #16a34a;
+    font-weight: 500;
+}
+
+.matching-no-match {
+    font-size: 12px;
+    color: var(--text-muted, #94a3b8);
+}
+
+/* Confidence badge */
+.matching-confidence {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+
+    &--high { background: rgba(22, 163, 74, 0.1); color: #16a34a; }
+    &--medium { background: rgba(217, 119, 6, 0.1); color: #d97706; }
+    &--low { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
+}
+
+/* Confidence dot (inline indicator next to doc filename) */
+.matching-confidence-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    flex-shrink: 0;
+
+    &--high { background: #16a34a; }
+    &--medium { background: #d97706; }
+    &--low { background: #dc2626; }
+}
+
+/* Doc match wrapper (dot + filename) */
+.matching-doc-match {
+    display: inline-flex;
+    align-items: center;
+}
+
+/* High confidence summary item */
+.matching-panel__summary-item--high strong {
+    color: #16a34a;
+}
+
+/* Link button (unmatched rows) */
+.matching-row__link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    border: 1px solid var(--primary-color, #3b82f6);
+    border-radius: 5px;
+    background: transparent;
+    color: var(--primary-color, #3b82f6);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+
+    &:hover {
+        background: var(--primary-color, #3b82f6);
+        color: #fff;
+    }
+}
+
+/* Match status badge */
+.matching-status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+
+    &--auto { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    &--manual { background: rgba(139, 92, 246, 0.1); color: #7c3aed; }
+    &--confirmed { background: rgba(22, 163, 74, 0.1); color: #16a34a; }
+}
+
+/* Row actions group */
+.matching-row__actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Delete button on matching rows */
+.matching-row__delete-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted, #94a3b8);
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:hover {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+    }
+}
+
+/* Multi-link doc count badge */
+.matching-doc-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 4px;
+    margin-left: 4px;
+    border-radius: 9px;
+    background: rgba(22, 163, 74, 0.12);
+    color: #16a34a;
+    font-size: 10px;
+    font-weight: 700;
+}

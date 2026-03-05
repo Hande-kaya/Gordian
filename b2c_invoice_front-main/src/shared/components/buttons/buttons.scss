@@ -1,0 +1,158 @@
+/**
+ * Button Styles
+ * =============
+ */
+
+@import '../../styles/variables.scss';
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-base;
+    border-radius: $radius-base;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    cursor: pointer;
+    transition: all $transition-fast;
+    border: 1px solid $color-border;
+    background: $color-bg-white;
+    color: $color-text-primary;
+    white-space: nowrap;
+
+    &:hover:not(:disabled) {
+        background: $color-bg-hover;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    &__icon {
+        font-size: $font-size-base;
+    }
+
+    // Primary (Save)
+    &--primary {
+        background: $color-accent;
+        color: white;
+        border-color: $color-accent;
+
+        &:hover:not(:disabled) {
+            background: $color-accent-dark;
+            border-color: $color-accent-dark;
+        }
+    }
+
+    // Danger (Delete)
+    &--danger {
+        background: $color-error;
+        color: white;
+        border-color: $color-error;
+
+        &:hover:not(:disabled) {
+            background: darken($color-error, 10%);
+            border-color: darken($color-error, 10%);
+        }
+    }
+
+    // Edit
+    &--edit {
+        background: $color-bg-white;
+        border-color: $color-border;
+
+        &:hover:not(:disabled) {
+            background: $color-bg-hover;
+            border-color: $color-accent;
+        }
+    }
+
+    // Cancel (when editing)
+    &--cancel {
+        background: $color-warning-light;
+        border-color: $color-warning;
+        color: darken($color-warning, 20%);
+    }
+
+    // Add
+    &--add {
+        background: #6baed6;
+        color: white;
+        border-color: #c6dbef;
+
+        &:hover:not(:disabled) {
+            background: $color-bg-hover;
+            border-color: $color-border;
+            color: $color-text-primary;
+        }
+    }
+
+    // Export
+    &--export {
+        background: $color-bg-white;
+        border-color: $color-border;
+
+        &:hover:not(:disabled) {
+            background: $color-success-light;
+            border-color: $color-success;
+        }
+    }
+
+    // Filter
+    &--filter {
+        background: $color-bg-white;
+        border-color: $color-border;
+
+        svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        &.btn--active {
+            background: $color-accent-light;
+            border-color: $color-accent;
+            color: $color-accent;
+        }
+    }
+}
+
+// Pagination Dropdown
+.pagination-dropdown {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+
+    &__label {
+        font-size: $font-size-sm;
+        color: $color-text-secondary;
+    }
+
+    &__select {
+        padding: $spacing-sm $spacing-base;
+        border: 1px solid $color-border;
+        border-radius: $radius-base;
+        font-size: $font-size-sm;
+        background: $color-bg-white;
+        cursor: pointer;
+
+        &:focus {
+            outline: none;
+            border-color: $color-accent;
+        }
+    }
+}
+
+// Action buttons in header
+.action-button {
+    @extend .btn;
+
+    &-primary {
+        @extend .btn--primary;
+    }
+
+    &-danger {
+        @extend .btn--danger;
+    }
+}

@@ -1,0 +1,108 @@
+// Pagination Styles
+// =================
+@import './variables-import';
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-md;
+  margin-top: $spacing-base;
+  padding: $spacing-base 0;
+  border-top: 1px solid $color-border;
+
+  .pagination-btn {
+    padding: $spacing-sm $spacing-base;
+    border: 1px solid $color-border-dark;
+    border-radius: $radius-md;
+    background: $color-bg-white;
+    color: $color-text-primary;
+    font-size: $font-size-base;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: $color-bg-hover;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  .pagination-info {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+}
+
+// Pagination controls (alternative style)
+.pagination-controls {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: $spacing-base 0 !important;
+  margin-top: $spacing-base !important;
+  border-top: 1px solid $color-border !important;
+}
+
+.pagination-info {
+  font-size: $font-size-base !important;
+  color: $color-text-secondary !important;
+}
+
+.pagination-buttons {
+  display: flex !important;
+  gap: $spacing-xs !important;
+  align-items: center !important;
+}
+
+.pagination-btn {
+  padding: $spacing-sm $spacing-md !important;
+  border: 1px solid $color-border-dark !important;
+  background: $color-bg-white !important;
+  color: $color-text-primary !important;
+  border-radius: $radius-md !important;
+  font-size: $font-size-base !important;
+  cursor: pointer !important;
+  transition: all $transition-base !important;
+
+  &:hover:not(:disabled) {
+    background: $color-bg-hover !important;
+    border-color: $color-text-muted !important;
+  }
+
+  &:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+  }
+
+  &.active {
+    background: $color-accent !important;
+    border-color: $color-accent !important;
+    color: $color-bg-white !important;
+
+    &:hover {
+      background: $color-accent-dark !important;
+      border-color: $color-accent-dark !important;
+    }
+  }
+}
+
+// Mobile responsive pagination
+@media (max-width: 768px) {
+  .pagination-controls {
+    flex-direction: column !important;
+    gap: $spacing-md !important;
+    text-align: center !important;
+  }
+
+  .pagination-buttons {
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+  }
+
+  .pagination-btn {
+    min-width: 40px !important;
+  }
+}

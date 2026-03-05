@@ -1,0 +1,34 @@
+// DataDashboard Styles - Main Entry Point
+// ========================================
+// This file imports all partials using design tokens from variables.scss
+// Split from 1844-line monolithic file for maintainability (CLAUDE.md: max 500 lines)
+
+// Base dashboard layout and container styles
+@import './base';
+
+// Header action buttons, search bar, dropdowns
+@import './header-actions';
+
+// Data table core styles (columns, headers, cells)
+@import './table';
+
+// Table row states (selected, mentioned, unread, stale)
+@import './table-rows';
+
+// Filter inputs and column toggles
+@import './filters';
+
+// Pagination controls
+@import './pagination';
+
+// Modal dialogs (column toggle modal)
+@import './modals';
+
+// Status badges and category/company tags
+@import './status-badges';
+
+// Loading, error, and empty states
+@import './states';
+
+// Responsive breakpoints and print styles
+@import './responsive';

@@ -1,0 +1,254 @@
+// Data Table Core Styles
+// ======================
+@import './variables-import';
+
+.data-table {
+  width: max-content !important;
+  min-width: 100% !important;
+  border-collapse: collapse !important;
+  table-layout: fixed !important;
+  position: relative !important;
+  display: table !important;
+
+  &:has(.filter-row) {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+  }
+
+  thead {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: $z-sidebar !important;
+    background: var(--bg-table-header) !important;
+    backdrop-filter: blur(10px) !important;
+
+    tr:first-child {
+      th {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 1001 !important;
+      }
+    }
+
+    tr.filter-row {
+      background: var(--bg-table-header) !important;
+
+      th {
+        position: sticky !important;
+        top: 41px !important;
+        z-index: 999 !important;
+        background: var(--bg-table-header) !important;
+        padding: $spacing-xs $spacing-sm !important;
+        border-bottom: 1px solid var(--border-color) !important;
+      }
+    }
+  }
+
+  th,
+  td {
+    padding: $spacing-sm !important;
+    text-align: center !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    border-right: 1px solid var(--border-color) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    box-sizing: border-box !important;
+
+    &.company-name,
+    &.description,
+    &.address {
+      white-space: normal !important;
+      word-wrap: break-word !important;
+    }
+  }
+
+  th {
+    background: var(--bg-table-header) !important;
+    font-weight: $font-weight-semibold !important;
+    color: var(--text-primary) !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: $z-sidebar !important;
+    font-size: $font-size-base !important;
+    border-bottom: 2px solid var(--border-color) !important;
+    box-shadow: $shadow-sm !important;
+    display: table-cell !important;
+    width: auto !important;
+    backdrop-filter: blur(10px) !important;
+
+    &.selection-column {
+      width: 36px !important;
+      min-width: 36px !important;
+      max-width: 36px !important;
+      padding: $spacing-sm $spacing-xs !important;
+    }
+  }
+
+  td {
+    font-size: $font-size-base !important;
+    color: var(--text-primary) !important;
+
+    &.selection-column {
+      width: 36px !important;
+      min-width: 36px !important;
+      max-width: 36px !important;
+      padding: $spacing-sm $spacing-xs !important;
+    }
+
+    &.loading-cell {
+      text-align: center !important;
+      white-space: normal !important;
+      overflow: visible !important;
+      padding: 60px $spacing-lg !important;
+      width: 100% !important;
+    }
+  }
+
+  tbody tr {
+    &:hover {
+      background: var(--bg-hover) !important;
+    }
+  }
+}
+
+// Selection column
+.data-table .selection-column,
+.selection-column {
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  text-align: center !important;
+  padding: $spacing-sm $spacing-xs !important;
+  box-sizing: border-box !important;
+  border-right: none !important;
+  list-style: none !important;
+  list-style-type: none !important;
+
+  // Prevent any pseudo-element dots/markers
+  &::before, &::after {
+    display: none !important;
+    content: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  input[type="checkbox"] {
+    margin: 0 !important;
+    width: 18px !important;
+    height: 18px !important;
+    cursor: pointer !important;
+    flex-shrink: 0 !important;
+    appearance: auto !important;
+    -webkit-appearance: checkbox !important;
+  }
+}
+
+.data-table th.selection-column,
+.data-table td.selection-column {
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  padding: $spacing-sm $spacing-xs !important;
+  border-right: none !important;
+}
+
+// Sortable columns
+.sortable {
+  cursor: pointer !important;
+  user-select: none !important;
+
+  &:hover {
+    background: var(--bg-hover) !important;
+  }
+}
+
+.sort-indicator {
+  margin-left: $spacing-xs !important;
+  color: $color-success !important;
+  font-weight: bold !important;
+}
+
+.sort-loading {
+  .sort-indicator {
+    animation: spin 1s linear infinite;
+  }
+}
+
+// Column header content
+.column-header-content {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: $spacing-xs !important;
+}
+
+.column-title {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+// Drag & Drop
+.dragging {
+  opacity: 0.5 !important;
+  background: var(--border-color) !important;
+}
+
+th[draggable="true"] {
+  cursor: move !important;
+
+  &:hover {
+    background: var(--bg-hover) !important;
+  }
+}
+
+th[draggable="true"]:active {
+  cursor: grabbing !important;
+}
+
+th[draggable="true"]:hover {
+  border-left: 2px solid $color-success !important;
+  border-right: 2px solid $color-success !important;
+}
+
+// Column resize handle
+.column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 12px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 10;
+  user-select: none;
+
+  &:hover {
+    background: rgba($color-success, 0.4);
+    border-right: 2px solid $color-success;
+  }
+
+  &:active {
+    background: rgba($color-success, 0.6);
+    border-right: 2px solid darken($color-success, 10%);
+  }
+}
+
+// Column width classes
+th, td {
+  &.column-global_id { width: 100px !important; }
+  &.column-name { width: 200px !important; }
+  &.column-category { width: 150px !important; }
+  &.column-address { width: 250px !important; }
+  &.column-website { width: 150px !important; }
+  &.column-online_sales { width: 120px !important; }
+  &.column-online_marketing { width: 140px !important; }
+  &.column-approval_status { width: 120px !important; }
+  &.column-recommended_by { width: 200px !important; }
+  &.column-overall_score { width: 120px !important; }
+  &.column-trustpilot_score { width: 100px !important; }
+  &.column-google_maps_score { width: 100px !important; }
+  &.column-mebsis_score { width: 80px !important; }
+  &.column-email_score { width: 100px !important; }
+  &.column-status { width: 100px !important; }
+}

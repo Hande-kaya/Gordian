@@ -1,0 +1,98 @@
+// ============================================
+// Invoice Checker - Design Tokens
+// ============================================
+// Color palette matching RFQ project
+
+// Background Colors
+$color-bg-primary: #f5f7fa; // Content background
+$color-bg-sidebar: #fdfdfd; // Sidebar background
+$color-bg-white: #ffffff; // Cards, headers
+$color-bg-hover: #f9fafb; // Hover states
+$color-bg-active: #f0f0f0; // Active states
+
+// Border Colors
+$color-border: #e5e7eb; // Default borders
+$color-border-light: #f3f4f6; // Light borders
+$color-border-dark: #d1d5db; // Dark borders
+
+// Text Colors
+$color-text-primary: #111827; // Headings, primary text
+$color-text-secondary: #6b7280; // Descriptions, secondary
+$color-text-muted: #9ca3af; // Muted text
+$color-text-light: #d1d5db; // Very light text
+
+// Accent Colors (green for B2C theme)
+$color-accent: #059669; // Primary green
+$color-accent-light: #ecfdf5; // Light green background
+$color-accent-dark: #047857; // Dark green
+$color-accent-hover: #065f46; // Hover state
+
+// Status Colors
+$color-success: #10b981; // Green
+$color-success-light: #d1fae5;
+$color-warning: #f59e0b; // Yellow/Orange
+$color-warning-light: #fef3c7;
+$color-error: #ef4444; // Red
+$color-error-light: #fee2e2;
+$color-info: #3b82f6; // Blue (same as accent)
+$color-info-light: #dbeafe;
+
+// Typography
+$font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+
+// Font Sizes
+$font-size-xs: 10px;
+$font-size-sm: 12px;
+$font-size-base: 14px;
+$font-size-md: 16px;
+$font-size-lg: 18px;
+$font-size-xl: 20px;
+$font-size-2xl: 24px;
+$font-size-3xl: 28px;
+$font-size-4xl: 32px;
+
+// Font Weights
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+// Spacing
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-base: 16px;
+$spacing-lg: 20px;
+$spacing-xl: 24px;
+$spacing-2xl: 32px;
+$spacing-3xl: 48px;
+
+// Border Radius
+$radius-sm: 4px;
+$radius-md: 6px;
+$radius-base: 8px;
+$radius-lg: 12px;
+$radius-xl: 16px;
+$radius-full: 9999px;
+
+// Shadows
+$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+$shadow-base: 0 1px 3px rgba(0, 0, 0, 0.1);
+$shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+$shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+// Layout
+$sidebar-width: 220px;
+$sidebar-width-collapsed: 80px;
+$header-height: 72px;
+
+// Transitions
+$transition-fast: 0.15s ease;
+$transition-base: 0.2s ease;
+$transition-slow: 0.3s ease;
+
+// Z-index
+$z-sidebar: 1000;
+$z-header: 100;
+$z-modal: 2000;
+$z-tooltip: 3000;

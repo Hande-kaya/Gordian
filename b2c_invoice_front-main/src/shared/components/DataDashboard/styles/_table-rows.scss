@@ -1,0 +1,195 @@
+// Table Row States
+// ================
+@import './variables-import';
+
+// Filter row
+.filter-row {
+  background: transparent !important;
+  border-bottom: none !important;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+
+  th {
+    padding: $spacing-xs !important;
+    padding-bottom: $spacing-xs !important;
+    border-bottom: none !important;
+    border-right: 1px solid $color-border !important;
+    background: transparent !important;
+    box-sizing: border-box !important;
+    min-width: 120px !important;
+
+    &.selection-column {
+      min-width: 36px !important;
+    }
+
+    &:last-child {
+      border-right: none !important;
+    }
+  }
+}
+
+// Spacer row
+.data-table tbody tr.table-spacer-row {
+  height: $spacing-sm !important;
+  background: transparent !important;
+  pointer-events: none !important;
+
+  &:hover {
+    background: transparent !important;
+  }
+
+  td {
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+  }
+}
+
+// First data row after spacer
+.data-table tbody tr.table-spacer-row + tr:not(.data-table-row--selected) {
+  border-top: 1px solid $color-border !important;
+  position: relative !important;
+  z-index: 1 !important;
+  margin-top: 0 !important;
+
+  td {
+    border-top: none !important;
+    padding-top: $spacing-sm !important;
+  }
+}
+
+// Stale rows
+.data-table tbody tr.data-table-row--stale {
+  background: $color-bg-hover !important;
+
+  &:hover {
+    background: $color-border !important;
+  }
+}
+
+// Mentioned rows (blue)
+.data-table tbody tr.data-table-row--mentioned {
+  background-color: $row-mentioned-bg !important;
+
+  &:hover {
+    background-color: $row-mentioned-hover !important;
+  }
+
+  td {
+    background-color: $row-mentioned-bg !important;
+  }
+
+  &:hover td {
+    background-color: $row-mentioned-hover !important;
+  }
+}
+
+// Unread rows (gray)
+.data-table tbody tr.data-table-row--unread {
+  background-color: $row-unread-bg !important;
+
+  &:hover {
+    background-color: $row-unread-hover !important;
+  }
+
+  td {
+    background-color: $row-unread-bg !important;
+  }
+
+  &:hover td {
+    background-color: $row-unread-hover !important;
+  }
+}
+
+// Selected row (blue border)
+.data-table tbody tr.data-table-row--selected {
+  position: relative !important;
+  border: 2px solid $row-selected-border !important;
+  border-left: 2px solid $row-selected-border !important;
+  border-right: 2px solid $row-selected-border !important;
+  border-top: 2px solid $row-selected-border !important;
+  border-bottom: 2px solid $row-selected-border !important;
+  outline: 2px solid $row-selected-border !important;
+  outline-offset: -2px !important;
+  transition: border-color $transition-base, outline-color $transition-base, box-shadow $transition-base !important;
+  box-shadow: 0 0 0 1px rgba($row-selected-border, 0.1), 0 2px 4px rgba($row-selected-border, 0.1) !important;
+  z-index: 1001 !important;
+
+  &:first-child td {
+    padding-top: $spacing-sm !important;
+  }
+
+  td {
+    border-top: 2px solid $row-selected-border !important;
+    border-right: 1px solid $row-selected-border !important;
+    border-color: $row-selected-border !important;
+    transition: border-color $transition-base !important;
+    position: relative !important;
+    z-index: 1 !important;
+  }
+
+  td:last-child {
+    border-right: none !important;
+  }
+
+  &:hover {
+    border-color: $row-selected-hover !important;
+    outline-color: $row-selected-hover !important;
+    box-shadow: 0 0 0 1px rgba($row-selected-hover, 0.15), 0 2px 6px rgba($row-selected-border, 0.15) !important;
+
+    td {
+      border-top-color: $row-selected-hover !important;
+      border-right-color: $row-selected-hover !important;
+      border-color: $row-selected-hover !important;
+    }
+  }
+}
+
+// Row action column
+.row-action-column {
+  padding: $spacing-sm $spacing-md !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.row-action-button {
+  background: $color-bg-white !important;
+  color: $color-text-primary !important;
+  border: 1px solid $color-border-dark !important;
+  padding: $spacing-md / 2 14px !important;
+  border-radius: $radius-md !important;
+  font-size: 13px !important;
+  font-weight: $font-weight-medium !important;
+  cursor: pointer !important;
+  transition: all $transition-base !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 100px !important;
+  box-shadow: $shadow-sm !important;
+
+  &:hover {
+    background: $color-bg-hover !important;
+    border-color: $color-text-muted !important;
+    box-shadow: $shadow-base !important;
+  }
+
+  &:active {
+    background: $color-bg-hover !important;
+    border-color: $color-text-secondary !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  &:focus {
+    outline: none !important;
+    border-color: $color-text-secondary !important;
+    box-shadow: 0 0 0 3px rgba($color-text-secondary, 0.1) !important;
+  }
+
+  &:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    background: $color-bg-hover !important;
+  }
+}

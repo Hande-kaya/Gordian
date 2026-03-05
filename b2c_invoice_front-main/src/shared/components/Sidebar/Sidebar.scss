@@ -1,0 +1,432 @@
+/**
+ * Sidebar Styles
+ * ==============
+ * Matching RFQ project design patterns.
+ */
+
+@import '../../styles/variables.scss';
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: $sidebar-width;
+    height: 100vh;
+    background-color: $color-bg-sidebar;
+    border-right: 1px solid $color-border-dark;
+    display: flex;
+    flex-direction: column;
+    z-index: $z-sidebar;
+    transition: width $transition-slow;
+
+    &--collapsed {
+        width: $sidebar-width-collapsed;
+    }
+
+    // Header
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        padding: $spacing-sm $spacing-lg;
+        border-bottom: none;
+        background-color: $color-bg-white;
+        min-height: 40px;
+    }
+
+    &__logo {
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+        margin-left: $spacing-xl;
+        min-height: 24px;
+    }
+
+    &__logo-icon {
+        font-size: $font-size-xl;
+        font-weight: $font-weight-bold;
+    }
+
+    &__logo-text {
+        font-size: $font-size-lg;
+        font-weight: $font-weight-bold;
+        color: $color-text-primary;
+        letter-spacing: -0.025em;
+    }
+
+    // Navigation
+    &__nav {
+        flex: 1;
+        padding: $spacing-base 0;
+        padding-top: 43px;
+        overflow-y: auto;
+        overflow-x: hidden;
+
+        &::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        &::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background: $color-text-secondary;
+            border-radius: 2px;
+        }
+    }
+
+    &__separator {
+        height: 1px;
+        background-color: $color-border;
+        margin: $spacing-md $spacing-lg;
+    }
+
+    &__nav-item {
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+        padding: $spacing-sm $spacing-base;
+        margin: 1px $spacing-sm;
+        border-radius: 0;
+        cursor: pointer;
+        transition: all $transition-base;
+        user-select: none;
+        background-color: transparent;
+        border: none;
+        width: calc(100% - #{$spacing-base});
+        text-align: left;
+
+        &:hover {
+            background-color: $color-bg-hover;
+        }
+
+        &--active {
+            background-color: $color-accent-light;
+            border-left: 4px solid $color-accent;
+            padding-left: $spacing-md;
+
+            .sidebar__nav-label {
+                color: $color-text-primary;
+                font-weight: $font-weight-semibold;
+            }
+        }
+    }
+
+    &__nav-icon {
+        font-size: $font-size-base;
+        color: $color-text-muted;
+        width: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    &__nav-label {
+        font-size: $font-size-sm;
+        font-weight: $font-weight-medium;
+        color: $color-text-primary;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+    }
+
+    &__nav-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        background-color: $color-text-secondary;
+        color: $color-bg-white;
+        font-size: 11px;
+        font-weight: $font-weight-semibold;
+        border-radius: $radius-full;
+        margin-left: auto;
+    }
+
+    // Expandable menu styles
+    &__nav-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    &__nav-chevron {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: auto;
+        color: $color-text-muted;
+        flex-shrink: 0;
+    }
+
+    &__nav-item--parent {
+        cursor: pointer;
+
+        &:hover .sidebar__nav-chevron {
+            color: $color-text-primary;
+        }
+    }
+
+    &__nav-item--parent-active {
+        .sidebar__nav-label {
+            color: $color-text-primary;
+            font-weight: $font-weight-medium;
+        }
+    }
+
+    &__nav-children {
+        display: flex;
+        flex-direction: column;
+        padding-left: $spacing-lg;
+        margin-top: 2px;
+        margin-bottom: $spacing-xs;
+    }
+
+    &__nav-item--child {
+        padding: $spacing-xs $spacing-base;
+        margin: 1px $spacing-sm;
+        font-size: $font-size-xs;
+
+        .sidebar__nav-icon {
+            width: 16px;
+            font-size: $font-size-xs;
+            opacity: 0; // Hide icon for children, use bullet instead
+        }
+
+        .sidebar__nav-label {
+            font-size: $font-size-xs;
+
+            &::before {
+                content: '•';
+                margin-right: $spacing-xs;
+                color: $color-text-muted;
+            }
+        }
+
+        &.sidebar__nav-item--active {
+            background-color: $color-accent-light;
+            border-left: 3px solid $color-accent;
+
+            .sidebar__nav-label {
+                color: $color-accent;
+                font-weight: $font-weight-semibold;
+
+                &::before {
+                    color: $color-accent;
+                }
+            }
+        }
+    }
+
+    // Footer
+    &__footer {
+        display: flex;
+        align-items: center;
+        gap: $spacing-md;
+        padding: $spacing-base $spacing-lg;
+        border-top: 1px solid $color-border-light;
+        background-color: $color-bg-sidebar;
+    }
+
+    &__user {
+        display: flex;
+        align-items: center;
+        gap: $spacing-md;
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__user-avatar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: $color-accent;
+        color: $color-bg-white;
+        font-size: $font-size-sm;
+        font-weight: $font-weight-semibold;
+        flex-shrink: 0;
+        text-transform: uppercase;
+        overflow: hidden;
+    }
+
+    &__user-avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    &__user-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__user-name {
+        font-size: $font-size-sm;
+        font-weight: $font-weight-semibold;
+        color: $color-text-primary;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 2px;
+    }
+
+    &__user-email {
+        font-size: $font-size-xs;
+        color: $color-text-muted;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__lang-toggle {
+        padding: 2px 8px;
+        border: 1px solid $color-border;
+        border-radius: $radius-full;
+        background-color: $color-bg-white;
+        color: $color-text-secondary;
+        font-size: 11px;
+        font-weight: $font-weight-semibold;
+        cursor: pointer;
+        transition: all $transition-base;
+        flex-shrink: 0;
+        line-height: 1.4;
+
+        &:hover {
+            background-color: $color-accent-light;
+            border-color: $color-accent;
+            color: $color-accent;
+        }
+    }
+
+    &__logout {
+        padding: $spacing-xs $spacing-sm;
+        border: none;
+        border-radius: $radius-sm;
+        background-color: transparent;
+        color: $color-text-muted;
+        font-size: $font-size-xs;
+        cursor: pointer;
+        transition: all $transition-base;
+        flex-shrink: 0;
+
+        &:hover {
+            background-color: $color-bg-hover;
+            color: $color-error;
+        }
+    }
+}
+
+// Panel toggle button (sidebar open/close)
+.sidebar__toggle {
+    display: none;
+    position: fixed;
+    top: $spacing-md;
+    left: $spacing-md;
+    z-index: $z-sidebar + 2;
+    width: 36px;
+    height: 36px;
+    border-radius: $radius-base;
+    border: 1px solid var(--border-color, $color-border);
+    background-color: var(--bg-white, $color-bg-white);
+    color: var(--text-secondary, $color-text-secondary);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    box-shadow: $shadow-sm;
+    transition: all $transition-base;
+
+    &:hover {
+        background-color: var(--bg-hover, $color-bg-hover);
+        color: var(--text-primary, $color-text-primary);
+    }
+
+    &:active {
+        transform: scale(0.95);
+    }
+
+    // When inside the sidebar header
+    &--inside {
+        position: static;
+        margin-left: auto;
+        border: none;
+        background: transparent;
+        color: $color-text-muted;
+        box-shadow: none;
+        flex-shrink: 0;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: $color-text-primary;
+        }
+    }
+}
+
+// Mobile backdrop overlay
+.sidebar__backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: $z-sidebar - 1;
+    animation: sidebarFadeIn 0.25s ease;
+}
+
+@keyframes sidebarFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+// Responsive - Mobile slide-in sidebar
+@media (max-width: 768px) {
+    .sidebar__toggle {
+        display: flex;
+    }
+
+    .sidebar__backdrop {
+        display: block;
+    }
+
+    .sidebar {
+        // Slide off-screen by default on mobile
+        &--mobile {
+            transform: translateX(-100%);
+            transition: transform $transition-slow;
+            width: $sidebar-width;
+        }
+
+        // Slide in when open
+        &--mobile-open {
+            transform: translateX(0);
+        }
+
+        // Show all labels on mobile (full sidebar, not collapsed)
+        &--mobile &__nav-label,
+        &--mobile &__nav-badge,
+        &--mobile &__user-info,
+        &--mobile &__logo-text,
+        &--mobile &__nav-chevron,
+        &--mobile &__nav-children {
+            display: flex;
+        }
+
+        &--mobile &__header {
+            padding: $spacing-sm $spacing-lg;
+        }
+
+        &--mobile &__logo {
+            margin-left: $spacing-sm;
+        }
+
+        &--mobile &__footer {
+            padding: $spacing-base $spacing-lg;
+            flex-direction: row;
+        }
+    }
+}

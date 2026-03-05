@@ -1,0 +1,18 @@
+# Environment
+.env
+venv/
+__pycache__/
+*.pyc
+
+# Credentials - NEVER commit!
+credentials/
+*.json
+!package.json
+
+# Uploads
+uploads/
+
+# IDE
+.vscode/
+.idea/
+**/.DS_Store

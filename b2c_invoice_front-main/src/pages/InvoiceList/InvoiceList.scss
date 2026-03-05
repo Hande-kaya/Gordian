@@ -1,0 +1,528 @@
+/**
+ * Invoice List Page Styles - B2C
+ * Copied from invoice-management.
+ */
+
+@import '../../shared/styles/variables.scss';
+
+.filename-cell {
+    max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block;
+}
+
+.status-badge {
+    display: inline-flex; align-items: center; padding: 4px 8px;
+    border-radius: 4px; font-size: 12px; font-weight: 500; white-space: nowrap;
+    &.status-success { background-color: var(--status-success-bg); color: var(--status-success-text); }
+    &.status-warning { background-color: var(--status-warning-bg); color: var(--status-warning-text); }
+    &.status-info { background-color: var(--status-info-bg); color: var(--status-info-text); }
+    &.status-error { background-color: var(--status-error-bg); color: var(--status-error-text); }
+    &.status-default { background-color: var(--bg-hover); color: var(--text-secondary); }
+    &.status-active, &.status-verified { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
+    &.status-pending { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    &.status-rejected { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
+}
+
+// Inline Upload Dropzone (above table, below search)
+.upload-dropzone {
+    display: flex; align-items: center; justify-content: center; gap: $spacing-sm;
+    height: 48px; margin-bottom: $spacing-base;
+    border: 2px dashed var(--border-color); border-radius: $radius-lg;
+    cursor: pointer; transition: all 0.2s; background: transparent; user-select: none;
+
+    &:hover {
+        border-color: $color-success; background: rgba($color-success, 0.04);
+        .upload-dropzone__icon, .upload-dropzone__text { color: $color-success; }
+    }
+    &--hover {
+        border-color: $color-success; border-style: solid; background: rgba($color-success, 0.08);
+        .upload-dropzone__icon, .upload-dropzone__text { color: $color-success; }
+    }
+    &__icon { display: flex; align-items: center; color: var(--text-muted); transition: color 0.2s; }
+    &__text { font-size: $font-size-sm; font-weight: $font-weight-medium; color: var(--text-muted); transition: color 0.2s; }
+}
+
+// Processing Banner
+.processing-banner {
+    margin-bottom: $spacing-base;
+    padding: $spacing-base $spacing-lg;
+    background: linear-gradient(135deg, rgba($color-success, 0.04) 0%, rgba($color-success, 0.08) 100%);
+    border: 1px solid rgba($color-success, 0.2);
+    border-radius: $radius-lg;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    &__spinner {
+        width: 18px;
+        height: 18px;
+        border: 2.5px solid rgba($color-success, 0.25);
+        border-top-color: $color-success;
+        border-radius: 50%;
+        animation: processingBannerSpin 0.8s linear infinite;
+        flex-shrink: 0;
+    }
+
+    @keyframes processingBannerSpin {
+        to { transform: rotate(360deg); }
+    }
+
+    &__title {
+        font-size: $font-size-base;
+        font-weight: $font-weight-semibold;
+        color: darken($color-success, 15%);
+    }
+
+    &__files {
+        display: flex;
+        flex-wrap: wrap;
+        gap: $spacing-sm;
+    }
+
+    &__file {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        background: var(--bg-white);
+        border: 1px solid rgba($color-success, 0.15);
+        border-radius: $radius-md;
+        font-size: $font-size-sm;
+        color: var(--text-primary);
+
+        svg { color: $color-success; flex-shrink: 0; }
+    }
+
+    &__filename {
+        max-width: 180px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__status {
+        font-size: 11px;
+        font-weight: $font-weight-medium;
+        padding: 2px 6px;
+        border-radius: $radius-full;
+
+        &--processing { background: $color-warning-light; color: #92400e; }
+        &--pending { background: rgba($color-success, 0.1); color: darken($color-success, 15%); }
+        &--failed { background: rgba($color-error, 0.1); color: $color-error; }
+        &--cancelled { background: var(--bg-hover); color: var(--text-muted); }
+    }
+
+    &__action {
+        padding: 2px 6px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 15px;
+        line-height: 1;
+        color: var(--text-muted);
+        border-radius: $radius-sm;
+        &:first-of-type { margin-left: auto; }
+        &--retry:hover { color: $color-success; background: rgba($color-success, 0.08); }
+        &--cancel:hover { color: $color-error; background: rgba($color-error, 0.08); }
+    }
+
+    &--failed {
+        background: linear-gradient(135deg, rgba($color-error, 0.04) 0%, rgba($color-error, 0.08) 100%);
+        border-color: rgba($color-error, 0.2);
+        .processing-banner__title { color: $color-error; }
+    }
+
+    &--cancelled {
+        background: var(--bg-hover);
+        border-color: var(--border-color);
+        .processing-banner__title { color: var(--text-secondary); }
+    }
+}
+
+// Currency Selector
+.currency-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 8px;
+
+    &__label {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        white-space: nowrap;
+    }
+
+    &__select {
+        padding: 6px 28px 6px 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+        background-color: var(--bg-white);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 8px center;
+        appearance: none;
+        cursor: pointer;
+        transition: border-color 0.15s;
+
+        &:hover { border-color: #9ca3af; }
+        &:focus { outline: none; border-color: #059669; box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.1); }
+    }
+}
+
+// Shared modal animations
+@keyframes b2cModalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes b2cModalSlideUp {
+    from { opacity: 0; transform: translateY(10px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes b2cSpin { to { transform: rotate(360deg); } }
+
+// Shared modal overlay
+.invoice-export-modal-overlay,
+.bulk-upload-modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--bg-overlay);
+    display: flex; align-items: center; justify-content: center;
+    z-index: $z-modal;
+    animation: b2cModalFadeIn 0.15s ease;
+
+    // Raise above tutorial overlay when tutorial is on export step
+    &--tutorial {
+        z-index: 10003;
+    }
+}
+
+// Shared modal base
+.invoice-export-modal,
+.bulk-upload-modal {
+    background: var(--bg-white);
+    border-radius: $radius-lg;
+    width: 90%;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    animation: b2cModalSlideUp 0.2s ease;
+
+    &__header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: $spacing-lg $spacing-xl; border-bottom: 1px solid var(--border-color);
+        h2 { margin: 0; font-size: $font-size-lg; font-weight: $font-weight-semibold; color: var(--text-primary); }
+    }
+    &__close {
+        background: none; border: none; cursor: pointer; padding: 6px;
+        color: var(--text-muted); border-radius: $radius-md; transition: all $transition-fast;
+        &:hover { background: var(--bg-hover); color: var(--text-primary); }
+        &:disabled { opacity: 0.5; cursor: not-allowed; }
+    }
+}
+
+// Export modal
+.invoice-export-modal {
+    max-width: 500px;
+
+    &__steps {
+        display: flex; align-items: center; justify-content: center; gap: 0;
+        padding: $spacing-base $spacing-xl 0;
+        .step-indicator {
+            display: flex; align-items: center; gap: $spacing-sm;
+            &__number {
+                width: 28px; height: 28px; border-radius: 50%;
+                display: flex; align-items: center; justify-content: center;
+                font-size: $font-size-sm; font-weight: $font-weight-semibold;
+                background: var(--border-color); color: var(--text-muted); transition: all 0.2s;
+            }
+            &__label { font-size: $font-size-sm; color: var(--text-muted); font-weight: $font-weight-medium; transition: color 0.2s; }
+            &__line { width: 48px; height: 2px; background: var(--border-color); margin: 0 $spacing-sm; }
+            &--active {
+                .step-indicator__number { background: $color-success; color: white; }
+                .step-indicator__label { color: var(--text-primary); }
+            }
+        }
+    }
+
+    &__body { padding: $spacing-xl; }
+
+    .export-step-header {
+        display: flex; align-items: flex-start; gap: $spacing-md; margin-bottom: $spacing-lg;
+        svg { color: $color-success; flex-shrink: 0; margin-top: 2px; }
+        h3 { margin: 0 0 4px; font-size: $font-size-md; font-weight: $font-weight-semibold; color: var(--text-primary); }
+        p { margin: 0; font-size: $font-size-sm; color: var(--text-secondary); line-height: 1.4; }
+    }
+
+    &__presets {
+        display: flex; flex-wrap: wrap; gap: $spacing-sm; margin-bottom: $spacing-base;
+        .preset-btn {
+            padding: $spacing-sm $spacing-base; border: 1px solid var(--border-color); border-radius: $radius-full;
+            background: var(--bg-white); font-size: $font-size-base; color: var(--text-primary);
+            cursor: pointer; transition: all $transition-fast;
+            &:hover:not(:disabled) { border-color: $color-success; color: darken($color-success, 8%); background: rgba($color-success, 0.04); }
+            &.active { background: $color-success; border-color: $color-success; color: white; }
+            &:disabled { opacity: 0.5; cursor: not-allowed; }
+        }
+    }
+
+    &__custom-months {
+        display: flex; align-items: center; gap: $spacing-md;
+        padding: $spacing-md; background: var(--bg-hover); border-radius: $radius-base;
+        label { font-size: $font-size-sm; font-weight: $font-weight-medium; color: var(--text-secondary); white-space: nowrap; }
+        input[type="number"] {
+            width: 70px; padding: $spacing-sm $spacing-md; border: 1px solid var(--border-color); border-radius: $radius-md;
+            font-size: $font-size-base; color: var(--text-primary); text-align: center;
+            &:focus { outline: none; border-color: $color-success; box-shadow: 0 0 0 2px rgba($color-success, 0.1); }
+        }
+        .custom-months-hint { font-size: $font-size-sm; color: var(--text-muted); }
+    }
+
+    &__custom-dates {
+        display: flex; gap: $spacing-base; margin-bottom: $spacing-lg;
+        padding: $spacing-base; background: var(--bg-hover); border-radius: $radius-base;
+        .date-input-group {
+            flex: 1;
+            label { display: block; font-size: $font-size-sm; font-weight: $font-weight-medium; color: var(--text-secondary); margin-bottom: 6px; }
+            input[type="date"] {
+                width: 100%; padding: $spacing-sm $spacing-md; border: 1px solid var(--border-color); border-radius: $radius-md;
+                font-size: $font-size-base; color: var(--text-primary);
+                &:focus { outline: none; border-color: $color-success; box-shadow: 0 0 0 2px rgba($color-success, 0.1); }
+                &:disabled { background: var(--border-color); cursor: not-allowed; }
+            }
+        }
+    }
+
+    &__summary {
+        padding: $spacing-md $spacing-base; background: rgba($color-success, 0.06); border-radius: $radius-base; border: 1px solid rgba($color-success, 0.2);
+        .summary-row {
+            display: flex; justify-content: space-between; align-items: center;
+            &:not(:last-child) { margin-bottom: $spacing-sm; }
+        }
+        .summary-label { font-size: $font-size-sm; color: darken($color-success, 10%); font-weight: $font-weight-medium; }
+        .summary-value { font-size: $font-size-sm; color: darken($color-success, 15%); font-weight: $font-weight-semibold; }
+    }
+
+    &__footer {
+        display: flex; justify-content: space-between; gap: $spacing-md;
+        padding: $spacing-base $spacing-xl; border-top: 1px solid var(--border-color); background: var(--bg-hover); border-radius: 0 0 $radius-lg $radius-lg;
+        .btn-cancel, .btn-back {
+            display: flex; align-items: center; gap: $spacing-xs;
+            padding: 10px $spacing-lg; border: 1px solid var(--border-color); border-radius: $radius-md; background: var(--bg-white);
+            font-size: $font-size-base; font-weight: $font-weight-medium; color: var(--text-primary); cursor: pointer; transition: all $transition-fast;
+            &:hover:not(:disabled) { background: var(--bg-hover); }
+            &:disabled { opacity: 0.5; cursor: not-allowed; }
+            svg { flex-shrink: 0; }
+        }
+        .btn-next {
+            display: flex; align-items: center; gap: $spacing-sm; padding: 10px $spacing-xl;
+            border: none; border-radius: $radius-md; background: $color-success;
+            font-size: $font-size-base; font-weight: $font-weight-semibold; color: white;
+            cursor: pointer; transition: all $transition-fast; margin-left: auto;
+            box-shadow: 0 1px 3px rgba($color-success, 0.3);
+            &:hover { background: darken($color-success, 6%); }
+            svg { flex-shrink: 0; }
+        }
+        .btn-export {
+            display: flex; align-items: center; gap: $spacing-sm; padding: 10px $spacing-xl;
+            border: none; border-radius: $radius-md; background: $color-success; font-size: $font-size-base;
+            font-weight: $font-weight-semibold; color: white; cursor: pointer; transition: all $transition-fast;
+            box-shadow: 0 1px 3px rgba($color-success, 0.3);
+            &:hover:not(:disabled) { background: darken($color-success, 6%); box-shadow: 0 2px 6px rgba($color-success, 0.35); }
+            &:disabled { opacity: 0.7; cursor: not-allowed; box-shadow: none; }
+            svg { flex-shrink: 0; }
+        }
+        .spinner-small {
+            width: 16px; height: 16px; border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white; border-radius: 50%; animation: b2cSpin 0.8s linear infinite;
+        }
+    }
+}
+
+// Bulk Upload modal
+.bulk-upload-modal {
+    max-width: 560px; max-height: 80vh; display: flex; flex-direction: column;
+
+    &__header {
+        h2 { display: flex; align-items: center; gap: $spacing-sm; }
+    }
+
+    &__body { padding: $spacing-xl; overflow-y: auto; flex: 1; }
+
+    &__dropzone {
+        border: 2px dashed rgba($color-success, 0.35);
+        border-radius: $radius-lg;
+        padding: 40px $spacing-xl;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: linear-gradient(135deg, rgba($color-success, 0.03) 0%, rgba($color-success, 0.07) 100%);
+
+        &:hover:not(.disabled) {
+            border-color: $color-success;
+            background: linear-gradient(135deg, rgba($color-success, 0.06) 0%, rgba($color-success, 0.12) 100%);
+            .dropzone-icon { color: $color-success; transform: translateY(-2px); }
+        }
+        &.dragging {
+            border-color: $color-success;
+            background: linear-gradient(135deg, rgba($color-success, 0.08) 0%, rgba($color-success, 0.15) 100%);
+            border-style: solid;
+            .dropzone-icon { color: $color-success; transform: translateY(-4px); }
+        }
+        &.disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .dropzone-icon {
+            color: rgba($color-success, 0.5);
+            margin-bottom: $spacing-base;
+            transition: all 0.2s;
+        }
+        .dropzone-text {
+            font-size: $font-size-md;
+            color: var(--text-primary);
+            margin: 0 0 6px;
+            font-weight: $font-weight-semibold;
+        }
+        .dropzone-hint {
+            font-size: $font-size-sm;
+            color: var(--text-muted);
+            margin: 0;
+        }
+    }
+
+    &__file-list {
+        margin-top: $spacing-lg;
+        .file-list-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: $spacing-sm;
+            span { font-size: $font-size-sm; color: var(--text-secondary); font-weight: $font-weight-medium; }
+            .clear-all-btn {
+                background: none; border: none; color: $color-error; font-size: $font-size-sm; cursor: pointer;
+                padding: $spacing-xs $spacing-sm; border-radius: $radius-sm;
+                &:hover { background: $color-error-light; }
+            }
+        }
+        .file-list-items {
+            max-height: 200px; overflow-y: auto;
+            border: 1px solid var(--border-color); border-radius: $radius-base;
+        }
+        .file-item {
+            display: flex; align-items: center; gap: $spacing-md;
+            padding: 10px $spacing-md; border-bottom: 1px solid var(--border-light);
+            transition: background 0.15s;
+            &:last-child { border-bottom: none; }
+            &--error { background: $color-error-light; }
+            &--success { background: rgba($color-success, 0.06); }
+            &--uploading { background: rgba($color-success, 0.04); }
+            &__icon {
+                flex-shrink: 0; width: 24px; height: 24px;
+                display: flex; align-items: center; justify-content: center;
+                color: var(--text-secondary);
+            }
+            &__info { flex: 1; min-width: 0; }
+            &__name {
+                display: block; font-size: $font-size-base; color: var(--text-primary);
+                white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            }
+            &__error { display: block; font-size: 11px; color: $color-error; margin-top: 2px; }
+            &__size { font-size: $font-size-sm; color: var(--text-muted); flex-shrink: 0; }
+            &__remove {
+                background: none; border: none; cursor: pointer; padding: $spacing-xs;
+                color: var(--text-muted); border-radius: $radius-sm; flex-shrink: 0;
+                &:hover { background: var(--bg-hover); color: $color-error; }
+            }
+        }
+    }
+
+    &__progress {
+        margin-top: $spacing-lg;
+        .progress-bar {
+            height: 6px; background: var(--border-color); border-radius: $radius-full; overflow: hidden;
+            &__fill {
+                height: 100%;
+                background: linear-gradient(90deg, $color-success, lighten($color-success, 8%));
+                transition: width 0.3s ease;
+                border-radius: $radius-full;
+            }
+        }
+        .progress-text {
+            font-size: $font-size-sm; color: var(--text-secondary);
+            margin-top: $spacing-sm; text-align: center;
+        }
+    }
+
+    &__done-banner {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-top: $spacing-lg;
+        padding: 14px 16px;
+        background: rgba($color-success, 0.06);
+        border: 1px solid rgba($color-success, 0.2);
+        border-radius: $radius-base;
+        animation: b2cModalFadeIn 0.3s ease;
+
+        svg { flex-shrink: 0; margin-top: 1px; }
+
+        .done-banner__text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+
+            strong {
+                font-size: $font-size-base;
+                font-weight: $font-weight-semibold;
+                color: darken($color-success, 15%);
+            }
+
+            span {
+                font-size: $font-size-sm;
+                color: var(--text-secondary);
+                line-height: 1.4;
+            }
+        }
+    }
+
+    &__footer {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: $spacing-base $spacing-xl;
+        border-top: 1px solid var(--border-color);
+        background: var(--bg-hover);
+        border-radius: 0 0 $radius-lg $radius-lg;
+        .upload-stats {
+            display: flex; gap: $spacing-sm;
+            .stat {
+                font-size: $font-size-sm; padding: $spacing-xs $spacing-sm; border-radius: $radius-full; font-weight: $font-weight-medium;
+                &--success { background: $color-success-light; color: #166534; }
+                &--error { background: $color-error-light; color: #991b1b; }
+                &--pending { background: var(--bg-hover); color: var(--text-secondary); border: 1px solid var(--border-color); }
+            }
+        }
+        .footer-buttons { display: flex; gap: $spacing-md; }
+        .btn-cancel {
+            padding: 10px $spacing-lg; border: 1px solid var(--border-color); border-radius: $radius-md;
+            background: var(--bg-white); font-size: $font-size-base; font-weight: $font-weight-medium;
+            color: var(--text-primary); cursor: pointer; transition: all $transition-fast;
+            &:hover { background: var(--bg-hover); }
+        }
+        .btn-upload {
+            display: flex; align-items: center; gap: $spacing-sm; padding: 10px $spacing-xl;
+            border: none; border-radius: $radius-md;
+            background: $color-success;
+            font-size: $font-size-base; font-weight: $font-weight-semibold; color: white;
+            cursor: pointer; transition: all $transition-fast;
+            box-shadow: 0 1px 3px rgba($color-success, 0.3);
+            &:hover:not(:disabled) { background: darken($color-success, 6%); box-shadow: 0 2px 6px rgba($color-success, 0.35); }
+            &:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+            svg { flex-shrink: 0; }
+        }
+    }
+
+    .spinner-small {
+        width: 16px; height: 16px;
+        border: 2px solid rgba($color-success, 0.25);
+        border-top-color: $color-success;
+        border-radius: 50%; animation: b2cSpin 0.8s linear infinite;
+    }
+}

@@ -1,0 +1,151 @@
+/**
+ * Theme CSS Custom Properties
+ * ===========================
+ * Light and dark mode color tokens.
+ * All component styles reference these vars for theming.
+ */
+
+:root,
+[data-theme="light"] {
+    // Backgrounds
+    --bg-primary: #faf9f7;
+    --bg-white: #ffffff;
+    --bg-sidebar: #064e3b;
+    --bg-sidebar-hover: rgba(255, 255, 255, 0.08);
+    --bg-hover: #f5f3f0;
+    --bg-card: #ffffff;
+    --bg-input: #faf9f7;
+    --bg-input-focus: #ffffff;
+    --bg-table-header: #f7f5f2;
+    --bg-table-even: rgba(5, 150, 105, 0.03);
+    --bg-table-odd: #ffffff;
+    --bg-table-hover: #ecfdf5;
+    --bg-modal: #ffffff;
+    --bg-overlay: rgba(0, 0, 0, 0.5);
+
+    // Text
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    --text-table-header: #8c857d;
+    --text-table-cell: #374151;
+    --text-on-sidebar: #ffffff;
+    --text-on-sidebar-muted: rgba(255, 255, 255, 0.7);
+    --text-button: #57534e;
+
+    // Borders
+    --border-color: #e5e7eb;
+    --border-light: #f0eeeb;
+    --border-warm: #e5e2de;
+    --border-card: #ebe8e4;
+    --border-input: #e5e2de;
+    --border-table: #ebe8e4;
+
+    // Shadows
+    --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.15);
+
+    // Status (same in both modes)
+    --status-success-bg: #d1fae5;
+    --status-success-text: #065f46;
+    --status-warning-bg: #fef3c7;
+    --status-warning-text: #92400e;
+    --status-error-bg: #fee2e2;
+    --status-error-text: #991b1b;
+    --status-info-bg: #dbeafe;
+    --status-info-text: #1e40af;
+
+    // Charts
+    --chart-grid: #e5e7eb;
+    --chart-axis: #9ca3af;
+    --chart-try: #3b82f6;
+    --chart-eur: #059669;
+    --chart-chf: #dc2626;
+    --chart-usd: #d97706;
+    --chart-gbp: #7c3aed;
+
+    // Loading
+    --bg-overlay-loading: rgba(255, 255, 255, 0.8);
+    --spinner-color: #337AB7;
+
+    // Misc
+    --disabled-text: #c4bfb9;
+    --disabled-border: #f0eeeb;
+    --placeholder: #b8b4ae;
+    --scrollbar-thumb: #d1d5db;
+    --scrollbar-track: #f3f4f6;
+}
+
+[data-theme="dark"] {
+    // Backgrounds — warm dark, not pure black
+    --bg-primary: #202020;
+    --bg-white: #2a2a2a;
+    --bg-sidebar: #064e3b;
+    --bg-sidebar-hover: rgba(255, 255, 255, 0.1);
+    --bg-hover: #353535;
+    --bg-card: #2a2a2a;
+    --bg-input: #333333;
+    --bg-input-focus: #3c3c3c;
+    --bg-table-header: #303030;
+    --bg-table-even: rgba(5, 150, 105, 0.06);
+    --bg-table-odd: #2a2a2a;
+    --bg-table-hover: rgba(5, 150, 105, 0.12);
+    --bg-modal: #2a2a2a;
+    --bg-overlay: rgba(0, 0, 0, 0.65);
+
+    // Text
+    --text-primary: #e8e8e8;
+    --text-secondary: #a8a8a8;
+    --text-muted: #787878;
+    --text-table-header: #9a9a9a;
+    --text-table-cell: #d0d0d0;
+    --text-on-sidebar: #ffffff;
+    --text-on-sidebar-muted: rgba(255, 255, 255, 0.7);
+    --text-button: #c0c0c0;
+
+    // Borders — visible on dark bg
+    --border-color: #424242;
+    --border-light: #383838;
+    --border-warm: #4a4a4a;
+    --border-card: #424242;
+    --border-input: #505050;
+    --border-table: #424242;
+
+    // Shadows
+    --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
+    --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.5);
+
+    // Status (slightly adjusted for dark bg)
+    --status-success-bg: rgba(5, 150, 105, 0.2);
+    --status-success-text: #6ee7b7;
+    --status-warning-bg: rgba(245, 158, 11, 0.2);
+    --status-warning-text: #fcd34d;
+    --status-error-bg: rgba(239, 68, 68, 0.2);
+    --status-error-text: #fca5a5;
+    --status-info-bg: rgba(59, 130, 246, 0.2);
+    --status-info-text: #93c5fd;
+
+    // Charts — brighter, softer on dark bg
+    --chart-grid: #3a3a3a;
+    --chart-axis: #707070;
+    --chart-try: #60a5fa;
+    --chart-eur: #34d399;
+    --chart-chf: #f87171;
+    --chart-usd: #fbbf24;
+    --chart-gbp: #a78bfa;
+
+    // Loading
+    --bg-overlay-loading: rgba(42, 42, 42, 0.85);
+    --spinner-color: #60a5fa;
+
+    // Misc
+    --disabled-text: #606060;
+    --disabled-border: #424242;
+    --placeholder: #707070;
+    --scrollbar-thumb: #606060;
+    --scrollbar-track: #2a2a2a;
+}

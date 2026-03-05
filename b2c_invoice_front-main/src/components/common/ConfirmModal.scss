@@ -1,0 +1,114 @@
+/**
+ * ConfirmModal Styles
+ */
+
+@import '../../shared/styles/variables.scss';
+
+.confirm-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-overlay);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: $z-modal;
+    animation: fadeIn 0.15s ease;
+}
+
+.confirm-modal {
+    background: var(--bg-white);
+    border-radius: $radius-lg;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    animation: slideUp 0.2s ease;
+
+    &__icon {
+        display: flex;
+        justify-content: center;
+        padding: 24px 24px 0 24px;
+    }
+
+    &__header {
+        padding: 12px $spacing-xl 0 $spacing-xl;
+        text-align: center;
+
+        h3 {
+            margin: 0;
+            font-size: $font-size-lg;
+            font-weight: $font-weight-semibold;
+            color: var(--text-primary);
+        }
+    }
+
+    &__body {
+        padding: 8px $spacing-xl 20px $spacing-xl;
+        text-align: center;
+
+        p {
+            margin: 0;
+            font-size: $font-size-base;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+    }
+
+    &__footer {
+        display: flex;
+        gap: $spacing-md;
+        padding: $spacing-base $spacing-xl;
+        border-top: 1px solid var(--border-color);
+        background: var(--bg-hover);
+
+        .confirm-modal__btn {
+            flex: 1;
+        }
+    }
+
+    &__btn {
+        padding: 10px $spacing-lg;
+        border-radius: $radius-md;
+        font-size: $font-size-base;
+        font-weight: $font-weight-medium;
+        cursor: pointer;
+        transition: all $transition-fast;
+        border: 1px solid var(--border-color);
+
+        &--secondary {
+            background: var(--bg-white);
+            color: var(--text-primary);
+
+            &:hover { background: var(--bg-hover); }
+        }
+
+        &--primary {
+            background: $color-accent;
+            color: white;
+            border-color: $color-accent;
+
+            &:hover { background: $color-accent-dark; }
+        }
+
+        &--danger {
+            background: #ef4444;
+            color: white;
+            border-color: #ef4444;
+
+            &:hover { background: #dc2626; }
+        }
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}

@@ -1,0 +1,250 @@
+// Header Actions & Buttons
+// ========================
+@import './variables-import';
+
+.custom-header-actions {
+  display: flex !important;
+  gap: $spacing-sm !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+
+  @media (max-width: 1200px) {
+    gap: $spacing-md / 2 !important;
+
+    button {
+      padding: $spacing-md / 2 $spacing-sm + 2 !important;
+      font-size: $font-size-sm !important;
+    }
+  }
+
+  @media (max-width: 900px) {
+    gap: $spacing-xs !important;
+
+    button {
+      padding: $spacing-xs $spacing-sm !important;
+      font-size: 11px !important;
+
+      span:not(:first-child) {
+        display: none !important;
+      }
+    }
+  }
+
+  @media (max-width: 600px) {
+    flex-wrap: wrap !important;
+    justify-content: flex-end !important;
+
+    button {
+      padding: $spacing-xs $spacing-md / 2 !important;
+      font-size: $font-size-xs !important;
+    }
+  }
+}
+
+// Header action button (standalone)
+.header-action-btn {
+  padding: $spacing-sm 14px !important;
+  border: 1px solid $color-border-dark !important;
+  border-radius: $radius-md !important;
+  background: var(--bg-white) !important;
+  color: var(--text-primary) !important;
+  font-size: 13px !important;
+  font-weight: $font-weight-medium !important;
+  cursor: pointer !important;
+  transition: all $transition-fast !important;
+  white-space: nowrap !important;
+
+  &:hover:not(:disabled) {
+    background: var(--bg-hover) !important;
+    border-color: var(--text-muted) !important;
+  }
+
+  &:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+  }
+
+  &.active {
+    background: $color-accent-light !important;
+    border-color: $color-accent !important;
+    color: $color-accent !important;
+  }
+
+  &--primary {
+    background: $color-accent !important;
+    border-color: $color-accent !important;
+    color: $color-bg-white !important;
+
+    &:hover:not(:disabled) {
+      background: $color-accent-dark !important;
+      border-color: $color-accent-dark !important;
+    }
+  }
+
+  &--danger {
+    background: var(--bg-white) !important;
+    border-color: var(--border-warm) !important;
+    color: $color-error !important;
+
+    &:hover:not(:disabled) {
+      background: var(--status-error-bg) !important;
+      border-color: var(--status-error-bg) !important;
+    }
+
+    &:disabled {
+      color: $color-text-muted !important;
+    }
+  }
+}
+
+// Add button (blue style)
+.add-button {
+  padding: $spacing-sm $spacing-base !important;
+  background: #6baed6 !important;
+  color: $color-bg-white !important;
+  border: 1px solid #c6dbef !important;
+  border-radius: $radius-md !important;
+  font-size: $font-size-base !important;
+  font-weight: $font-weight-medium !important;
+  cursor: pointer !important;
+  margin-right: $spacing-xs !important;
+  margin-left: auto !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+  z-index: 1 !important;
+
+  &:hover {
+    background: $color-bg-hover !important;
+    border-color: $color-text-muted !important;
+  }
+
+  &:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+  }
+}
+
+.add-first-button {
+  padding: $spacing-sm $spacing-base !important;
+  background: $color-accent !important;
+  color: $color-bg-white !important;
+  border: none !important;
+  border-radius: $radius-md !important;
+  font-size: $font-size-base !important;
+  font-weight: $font-weight-medium !important;
+  cursor: pointer !important;
+
+  &:hover {
+    background: $color-accent-dark !important;
+  }
+}
+
+// Show dropdown
+.show-dropdown-container {
+  position: relative !important;
+
+  .show-dropdown-btn {
+    padding-right: $spacing-md !important;
+  }
+
+  .show-dropdown-menu {
+    // React controls visibility via conditional rendering
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    margin-top: $spacing-xs !important;
+    background: var(--bg-white) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: $radius-md !important;
+    box-shadow: $shadow-md !important;
+    z-index: 9999 !important; // Above table header (1000) and everything else
+    min-width: 80px !important;
+  }
+
+  // Removed hover-based display - using React state instead
+
+  .dropdown-option {
+    display: block !important;
+    width: 100% !important;
+    padding: $spacing-sm $spacing-base !important;
+    border: none !important;
+    background: none !important;
+    text-align: left !important;
+    cursor: pointer !important;
+    font-size: $font-size-base !important;
+    color: $color-text-primary !important;
+
+    &:hover {
+      background: $color-bg-hover !important;
+    }
+
+    &.selected {
+      background: $color-accent-light !important;
+      color: $color-accent !important;
+    }
+  }
+}
+
+// DataDashboard specific dropdown
+.data-dashboard .show-dropdown-container {
+  position: relative !important;
+  display: inline-block !important;
+}
+
+.show-dropdown-button {
+  display: flex !important;
+  align-items: center !important;
+  gap: $spacing-xs !important;
+
+  .dropdown-arrow {
+    font-size: $font-size-xs !important;
+    transition: transform $transition-base !important;
+  }
+}
+
+.data-dashboard .show-dropdown-menu {
+  position: absolute !important;
+  top: 100% !important;
+  right: 0 !important;
+  background: var(--bg-white) !important;
+  border: 2px solid $color-accent !important;
+  border-radius: $radius-md !important;
+  box-shadow: $shadow-md !important;
+  z-index: 10000 !important;
+  min-width: 120px !important;
+  margin-top: $spacing-xs !important;
+  display: block !important;
+}
+
+.data-dashboard .dropdown-option {
+  width: 100% !important;
+  padding: $spacing-sm $spacing-md !important;
+  background: var(--bg-white) !important;
+  border: none !important;
+  text-align: left !important;
+  font-size: $font-size-base !important;
+  color: var(--text-primary) !important;
+  cursor: pointer !important;
+  transition: background-color $transition-base !important;
+
+  &:hover {
+    background: var(--bg-hover) !important;
+  }
+
+  &.selected {
+    background: $color-accent !important;
+    color: $color-bg-white !important;
+  }
+
+  &:first-child {
+    border-top-left-radius: $radius-md !important;
+    border-top-right-radius: $radius-md !important;
+  }
+
+  &:last-child {
+    border-bottom-left-radius: $radius-md !important;
+    border-bottom-right-radius: $radius-md !important;
+  }
+}

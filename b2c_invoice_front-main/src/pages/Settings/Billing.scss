@@ -1,0 +1,308 @@
+/**
+ * Billing Styles — Cards, purchase history table.
+ * Uses CSS variables for dark mode support.
+ */
+
+@import '../../shared/styles/variables.scss';
+
+$green-600: #059669;
+$green-700: #047857;
+$green-500: #10b981;
+$green-50: #ecfdf5;
+
+.settings {
+    // ── Billing Cards ──
+    &__billing-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 8px;
+    }
+
+    &__billing-card {
+        border: 2px solid var(--border-warm);
+        border-radius: 14px;
+        padding: 22px;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-primary);
+        transition: border-color 0.2s, box-shadow 0.2s;
+
+        &--free {
+            border-color: $green-500;
+            background: var(--billing-free-bg, linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%));
+        }
+
+        &--credit {
+            border-color: var(--billing-credit-border, #93c5fd);
+            background: var(--billing-credit-bg, linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%));
+        }
+
+        &--credit:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+    }
+
+    &__billing-card-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    &__billing-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        &--free { background: var(--billing-icon-free-bg, #d1fae5); color: $green-700; }
+        &--credit { background: var(--billing-icon-credit-bg, #dbeafe); color: var(--billing-icon-credit-color, #1d4ed8); }
+    }
+
+    &__billing-badge {
+        display: inline-block;
+        padding: 1px 8px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+
+        &--active { background: $green-600; color: #fff; }
+        &--credit { background: #3b82f6; color: #fff; }
+    }
+
+    &__billing-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 4px 0 0 0;
+    }
+
+    &__billing-price {
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin-bottom: 12px;
+
+        span { font-size: 13px; font-weight: 500; color: var(--text-muted); }
+    }
+
+    &__billing-features {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 auto 0;
+
+        li {
+            position: relative;
+            padding-left: 20px;
+            font-size: $font-size-sm;
+            color: var(--text-secondary);
+            line-height: 1.8;
+
+            &::before {
+                content: '\2713';
+                position: absolute;
+                left: 0;
+                font-weight: 700;
+                color: $green-500;
+            }
+        }
+    }
+
+    // ── Amount Input ──
+    &__billing-amount-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 14px;
+        margin-bottom: 6px;
+    }
+
+    &__billing-amount-input {
+        flex: 1;
+        padding: 9px 12px 9px 28px;
+        border: 1px solid var(--border-input);
+        border-radius: 8px;
+        font-size: $font-size-base;
+        font-weight: $font-weight-semibold;
+        color: var(--text-primary);
+        background: var(--bg-input);
+        font-family: inherit;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        -moz-appearance: textfield;
+
+        &::-webkit-inner-spin-button,
+        &::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+        &:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+            background: var(--bg-input-focus);
+        }
+    }
+
+    &__billing-amount-wrap {
+        position: relative;
+        flex: 1;
+
+        &::before {
+            content: '$';
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: $font-size-base;
+            font-weight: 700;
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+    }
+
+    &__billing-preview {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 4px;
+    }
+
+    &__billing-preview-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        background: var(--billing-tag-bg, #eff6ff);
+        color: var(--billing-tag-color, #1d4ed8);
+    }
+
+    &__billing-buy {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 12px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 10px;
+        font-size: $font-size-base;
+        font-weight: $font-weight-semibold;
+        font-family: inherit;
+        cursor: pointer;
+        background: #3b82f6;
+        color: #fff;
+        transition: all 0.2s;
+
+        &:hover:not(:disabled) { background: #2563eb; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3); }
+        &:disabled { opacity: 0.5; cursor: not-allowed; }
+    }
+
+    // ── Purchase History ──
+    &__history-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 32px 0;
+        color: var(--text-muted);
+
+        p { margin: 0; font-size: $font-size-sm; }
+    }
+
+    &__history-table-wrap {
+        overflow-x: auto;
+        margin-top: 4px;
+    }
+
+    &__history-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: $font-size-sm;
+
+        th {
+            text-align: left;
+            padding: 10px 12px;
+            font-weight: $font-weight-semibold;
+            color: var(--text-muted);
+            font-size: $font-size-xs;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border-bottom: 1px solid var(--border-card);
+        }
+
+        td {
+            padding: 12px;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover { background: var(--bg-hover); }
+    }
+
+    &__history-amount { font-weight: $font-weight-semibold; font-variant-numeric: tabular-nums; }
+
+    &__history-credit-tag {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        background: var(--billing-tag-bg, #eff6ff);
+        color: var(--billing-tag-color, #1d4ed8);
+        margin-right: 4px;
+    }
+
+    &__history-status {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 700;
+
+        &--success { background: var(--status-success-bg); color: var(--status-success-text); }
+        &--pending { background: var(--status-warning-bg); color: var(--status-warning-text); }
+        &--error { background: var(--status-error-bg); color: var(--status-error-text); }
+    }
+}
+
+// ── Dark mode overrides ──
+[data-theme="dark"] .settings {
+    &__billing-card {
+        &--free {
+            background: rgba(5, 150, 105, 0.1);
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+        &--credit {
+            background: rgba(59, 130, 246, 0.08);
+            border-color: rgba(59, 130, 246, 0.35);
+        }
+        &--credit:hover { border-color: #60a5fa; }
+    }
+
+    &__billing-icon {
+        &--free { background: rgba(5, 150, 105, 0.2); color: #6ee7b7; }
+        &--credit { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
+    }
+
+    &__billing-preview-tag,
+    &__history-credit-tag {
+        background: rgba(59, 130, 246, 0.15);
+        color: #93c5fd;
+    }
+}
+
+@media (max-width: 768px) {
+    .settings {
+        &__billing-grid { grid-template-columns: 1fr; }
+        &__billing-amount-row { flex-direction: column; }
+    }
+}

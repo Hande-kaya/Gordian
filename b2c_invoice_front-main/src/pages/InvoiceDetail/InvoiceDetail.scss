@@ -1,0 +1,462 @@
+/**
+ * InvoiceDetail Page Styles - Two-column PDF + fields layout
+ */
+
+@import '../../shared/styles/variables.scss';
+@import '../../shared/components/HeaderActions/HeaderActions.scss';
+
+// Highlight toggle button — amber highlighter theme
+.highlight-toggle {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px 6px 10px; border-radius: 8px;
+    border: 1px solid var(--border-color); background: var(--bg-white);
+    cursor: pointer; transition: all 0.2s; user-select: none;
+
+    &:hover { border-color: #d4a017; background: rgba(251, 191, 36, 0.06); }
+
+    &__icon { color: var(--text-muted); transition: all 0.2s; flex-shrink: 0; }
+    &__label { font-size: 12px; font-weight: 500; color: var(--text-secondary); transition: color 0.2s; }
+    &__dot {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: var(--border-color); transition: all 0.2s; flex-shrink: 0;
+    }
+
+    &--active {
+        border-color: #f59e0b; background: rgba(251, 191, 36, 0.1);
+        box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.15);
+        .highlight-toggle__icon { color: #d97706; fill: rgba(251, 191, 36, 0.3); }
+        .highlight-toggle__label { color: #92400e; font-weight: 600; }
+        .highlight-toggle__dot { background: #f59e0b; box-shadow: 0 0 6px rgba(245, 158, 11, 0.6); }
+        &:hover { border-color: #d97706; background: rgba(251, 191, 36, 0.15); }
+    }
+}
+
+// Compact header when invoice-detail page is rendered
+.layout__main:has(.invoice-detail) {
+    .layout__header {
+        padding: 24px 32px 0 32px;
+        gap: 8px;
+    }
+
+    .layout__page-title {
+        font-size: $font-size-xl;
+        margin-bottom: 0;
+    }
+
+    .layout__page-description {
+        font-size: $font-size-sm;
+        margin-top: 2px;
+    }
+
+    .layout__header-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .layout__content {
+        padding-top: $spacing-base;
+    }
+}
+
+.invoice-detail {
+    padding: 0 24px 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+
+    &__body {
+        display: grid;
+        grid-template-columns: minmax(400px, 1fr) minmax(380px, 1fr);
+        gap: 24px;
+        align-items: start;
+    }
+
+    &__pdf-col {
+        position: sticky;
+        top: 24px;
+    }
+
+    &__fields-col {
+        min-width: 0;
+    }
+
+    // Sample PDF placeholder for tutorial
+    &__sample-pdf {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 500px;
+        background: var(--bg-hover);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        color: var(--text-muted);
+
+        p {
+            margin: 16px 0 4px;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        span {
+            font-size: 13px;
+        }
+    }
+
+    &__loading, &__error {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 300px;
+        font-size: 16px;
+        color: var(--text-secondary);
+    }
+
+    &__error { color: #991b1b; }
+}
+
+// PDF Viewer Panel
+.pdf-viewer-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-hover);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+
+    &__zoom-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: var(--bg-hover);
+        border-bottom: 1px solid var(--border-color);
+
+        button {
+            width: 30px;
+            height: 30px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-white);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+
+            &:hover:not(:disabled) { background: var(--border-light); border-color: var(--text-muted); }
+            &:disabled { opacity: 0.4; cursor: not-allowed; }
+        }
+    }
+
+    &__zoom-label {
+        font-size: 13px;
+        color: var(--text-table-cell);
+        font-weight: 500;
+        min-width: 44px;
+        text-align: center;
+    }
+
+    &__zoom-fit {
+        width: auto !important;
+        padding: 0 10px !important;
+        font-size: 12px !important;
+        font-weight: 500;
+        color: var(--text-table-cell);
+    }
+
+    &__content {
+        flex: 1;
+        overflow: auto;
+        padding: 16px;
+        max-height: calc(100vh - 220px);
+
+        &--excel {
+            padding: 0;
+            overflow: hidden;
+        }
+    }
+
+    &__page-wrapper {
+        position: relative;
+        width: fit-content;
+        margin: 0 auto;
+
+        .react-pdf__Document { line-height: 0; }
+        .react-pdf__Page { display: inline-block; line-height: 0; }
+        .react-pdf__Page__canvas { display: block; }
+    }
+
+    &__overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+        overflow: visible;
+    }
+
+    &__loading {
+        padding: 40px;
+        color: var(--text-secondary);
+        font-size: 14px;
+        text-align: center;
+    }
+
+    &__error {
+        padding: 40px;
+        color: #dc2626;
+        font-size: 14px;
+        text-align: center;
+    }
+
+    &__controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 10px;
+        background: var(--bg-hover);
+        border-top: 1px solid var(--border-color);
+
+        button {
+            width: 32px;
+            height: 32px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-white);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+
+            &:hover:not(:disabled) { background: var(--border-light); border-color: var(--text-muted); }
+            &:disabled { opacity: 0.4; cursor: not-allowed; }
+        }
+
+        span {
+            font-size: 13px;
+            color: var(--text-secondary);
+            min-width: 60px;
+            text-align: center;
+        }
+    }
+}
+
+// ========================================
+// FieldSection styles
+// ========================================
+.field-section {
+    margin-bottom: 16px;
+    padding: 16px;
+    background: var(--bg-white);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+
+    &__title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0 0 12px 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 12px;
+    }
+
+    &__field {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    &__label {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    &__value {
+        font-size: 13px;
+        color: var(--text-primary);
+        line-height: 1.4;
+        padding: 2px 0;
+        word-break: break-word;
+    }
+
+    &__input {
+        padding: 7px 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        font-size: 13px;
+        color: var(--text-primary);
+        background: var(--bg-white);
+        transition: border-color 0.15s;
+
+        &:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+    }
+
+    // Compact read-only mode
+    &--readonly {
+        padding: 12px 16px;
+        margin-bottom: 10px;
+
+        .field-section__title {
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+        }
+
+        .field-section__grid {
+            gap: 6px 16px;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        }
+
+        .field-section__field {
+            gap: 1px;
+        }
+    }
+}
+
+// ========================================
+// Line Items Table
+// ========================================
+.line-items-section {
+    margin-bottom: 16px;
+    padding: 16px;
+    background: var(--bg-white);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+
+    &__title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0 0 12px 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    &__table-wrap {
+        overflow-x: auto;
+    }
+
+    &__table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+
+        th, td {
+            padding: 6px 8px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        th {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            background: var(--bg-table-header);
+            white-space: nowrap;
+        }
+
+        td { color: var(--text-table-cell); }
+        td.num-cell { text-align: right; font-variant-numeric: tabular-nums; }
+        .col-num { width: 32px; text-align: center; }
+        .col-qty, .col-unit { width: 60px; }
+        .col-price, .col-amount { width: 90px; text-align: right; }
+        .col-actions { width: 36px; text-align: center; }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: var(--bg-hover); }
+
+        // Editing mode input cells
+        &--editing {
+            td { padding: 4px 4px; }
+            input {
+                width: 100%;
+                padding: 5px 7px;
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
+                font-size: 12px;
+                color: var(--text-primary);
+                background: var(--bg-hover);
+                transition: border-color 0.15s;
+                &:focus {
+                    outline: none;
+                    border-color: #3b82f6;
+                    background: var(--bg-white);
+                }
+            }
+            input[type="number"] { text-align: right; }
+        }
+    }
+
+    &__remove-btn {
+        width: 24px;
+        height: 24px;
+        border: none;
+        background: none;
+        color: var(--text-muted);
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 4px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s;
+
+        &:hover {
+            color: var(--status-error-text);
+            background: var(--status-error-bg);
+        }
+    }
+
+    &__add-btn {
+        margin-top: 10px;
+        padding: 6px 14px;
+        background: none;
+        border: 1px dashed var(--border-color);
+        border-radius: 6px;
+        color: var(--text-secondary);
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.15s;
+        width: 100%;
+
+        &:hover {
+            border-color: var(--status-info-text);
+            color: var(--status-info-text);
+            background: var(--status-info-bg);
+        }
+    }
+}
+
+// Responsive: stack columns on narrow screens
+@media (max-width: 900px) {
+    .invoice-detail__body {
+        grid-template-columns: 1fr;
+    }
+
+    .invoice-detail__pdf-col {
+        position: static;
+    }
+
+    .pdf-viewer-panel__content {
+        max-height: 500px;
+    }
+}

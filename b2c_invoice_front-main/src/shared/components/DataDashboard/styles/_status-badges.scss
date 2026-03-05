@@ -1,0 +1,142 @@
+// Status Badges
+// =============
+@import './variables-import';
+
+.status-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 3px $spacing-sm !important;
+  border-radius: 3px !important;
+  font-size: 11px !important;
+  font-weight: $font-weight-semibold !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.025em !important;
+  min-width: 0 !important;
+  width: auto !important;
+  white-space: nowrap !important;
+  line-height: 1.4 !important;
+  box-shadow: $shadow-sm !important;
+}
+
+.status-active {
+  background-color: var(--status-success-bg) !important;
+  color: var(--status-success-text) !important;
+  border: 1px solid var(--status-success-bg) !important;
+}
+
+.status-inactive {
+  background-color: var(--status-error-bg) !important;
+  color: var(--status-error-text) !important;
+  border: 1px solid var(--status-error-bg) !important;
+}
+
+.status-pending {
+  background-color: var(--status-warning-bg) !important;
+  color: var(--status-warning-text) !important;
+  border: 1px solid var(--status-warning-bg) !important;
+}
+
+.status-approved {
+  background-color: var(--status-success-bg) !important;
+  color: var(--status-success-text) !important;
+  border: 1px solid var(--status-success-bg) !important;
+}
+
+.status-rejected {
+  background-color: var(--status-error-bg) !important;
+  color: var(--status-error-text) !important;
+  border: 1px solid var(--status-error-bg) !important;
+}
+
+.status-default {
+  background-color: var(--bg-hover) !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--bg-hover) !important;
+}
+
+// Alternative status badge style (with border-radius)
+.status-badge {
+  &.status-active {
+    background: var(--status-success-bg) !important;
+    color: var(--status-success-text) !important;
+  }
+
+  &.status-inactive {
+    background: var(--status-error-bg) !important;
+    color: var(--status-error-text) !important;
+  }
+
+  &.status-pending {
+    background: var(--status-warning-bg) !important;
+    color: var(--status-warning-text) !important;
+  }
+}
+
+// Score value display
+.score-value {
+  font-weight: $font-weight-medium;
+  font-size: $font-size-base;
+  color: $color-text-primary;
+}
+
+// Price range display
+.price-range {
+  font-weight: $font-weight-medium;
+  font-size: $font-size-base;
+  color: $color-success;
+  white-space: nowrap;
+}
+
+// Categories display
+.categories-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+  align-items: center;
+}
+
+.category-tag {
+  display: inline-block;
+  padding: 2px $spacing-md / 2;
+  background-color: $color-border;
+  color: $color-text-primary;
+  border-radius: $radius-sm;
+  font-size: 11px;
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+}
+
+.category-more {
+  font-size: 11px;
+  color: $color-text-secondary;
+  font-style: italic;
+}
+
+// Company display
+.companies-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+  align-items: center;
+}
+
+.company-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background-color: var(--status-info-bg);
+  border: 1px solid var(--status-info-bg);
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  color: var(--status-info-text);
+  margin-right: $spacing-xs;
+  margin-bottom: 2px;
+}
+
+.company-more {
+  font-size: 11px;
+  color: $color-text-secondary;
+  font-style: italic;
+}

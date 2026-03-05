@@ -1,0 +1,320 @@
+.cat-settings {
+
+    // ── Header ──
+    &__header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    &__toolbar {
+        display: flex;
+        align-items: center;
+        border: 1px solid var(--border-warm);
+        border-radius: 6px;
+        background: var(--bg-card);
+        overflow: hidden;
+        flex-shrink: 0;
+
+        .action-button {
+            padding: 8px 16px;
+            border: none;
+            border-right: 1px solid var(--border-warm);
+            border-radius: 0;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+
+            &:last-child { border-right: none; }
+            &:hover:not(:disabled) { background: var(--bg-hover); }
+            &:disabled { opacity: 0.35; cursor: not-allowed; }
+        }
+
+        .action-button-primary {
+            background: #059669;
+            color: #fff;
+            &:hover:not(:disabled) { background: #047857; }
+        }
+
+        .action-button--danger {
+            color: #ef4444;
+            &:hover:not(:disabled) { background: var(--status-error-bg); }
+        }
+    }
+
+    // ── Table wrapper ──
+    &__table-wrap {
+        border: 1px solid var(--border-table);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    &__table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+
+        th {
+            padding: 12px 20px;
+            background: var(--bg-table-header);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-table-header);
+            border-bottom: 2px solid #059669;
+            text-align: left;
+        }
+
+        td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-table);
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        tbody tr {
+            background: var(--bg-card);
+            transition: background 0.12s;
+
+            &:nth-child(even) { background: var(--bg-table-even); }
+            &:hover { background: var(--bg-table-hover); }
+            &:last-child td { border-bottom: none; }
+
+            td:first-child { border-left: 3px solid #059669; }
+        }
+    }
+
+    &__label {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    &__desc {
+        color: var(--text-secondary);
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    &__th--action { width: 50px; }
+    &__td--action { text-align: center; width: 50px; }
+
+    &__delete-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: color 0.15s, background 0.15s;
+        margin: 0 auto;
+
+        &:hover {
+            color: #ef4444;
+            background: var(--status-error-bg);
+        }
+    }
+
+    // ═══════════════════════════════
+    // EDIT MODE — spacious inputs
+    // ═══════════════════════════════
+    &--editing &__table {
+        td { padding: 12px 16px; }
+        tbody tr td:first-child { border-left: 3px solid transparent; }
+    }
+
+    &__input {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--border-input);
+        border-radius: 8px;
+        font-size: 15px;
+        font-family: inherit;
+        background: var(--bg-input);
+        color: var(--text-primary);
+        transition: border-color 0.15s, box-shadow 0.15s;
+        box-sizing: border-box;
+
+        &:focus {
+            outline: none;
+            border-color: #059669;
+            background: var(--bg-input-focus);
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
+        }
+
+        &::placeholder { color: var(--placeholder); }
+    }
+
+    // ── Edit-mode action row ──
+    &__actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
+    }
+
+    &__action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border: 1px dashed var(--border-warm);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 13px;
+        font-family: inherit;
+        transition: color 0.15s, border-color 0.15s;
+
+        &:hover {
+            color: #059669;
+            border-color: #059669;
+        }
+    }
+
+    // ═══════════════════════════════
+    // IMPORT MODAL
+    // ═══════════════════════════════
+    &__modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: var(--bg-overlay);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    &__modal {
+        position: relative;
+        width: 560px;
+        max-width: 90vw;
+        max-height: 80vh;
+        background: var(--bg-card);
+        border: 1px solid var(--border-card);
+        border-radius: 14px;
+        padding: 28px;
+        box-shadow: var(--shadow-modal);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    &__modal-close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: color 0.15s;
+
+        &:hover { color: var(--text-primary); }
+    }
+
+    &__modal-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 4px;
+    }
+
+    &__modal-desc {
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin: 0 0 16px;
+        line-height: 1.5;
+    }
+
+    &__modal-textarea {
+        width: 100%;
+        padding: 14px;
+        border: 1px solid var(--border-input);
+        border-radius: 10px;
+        font-size: 14px;
+        font-family: inherit;
+        background: var(--bg-input);
+        color: var(--text-primary);
+        resize: vertical;
+        min-height: 160px;
+        box-sizing: border-box;
+        transition: border-color 0.15s, box-shadow 0.15s;
+
+        &:focus {
+            outline: none;
+            border-color: #059669;
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
+        }
+
+        &::placeholder { color: var(--placeholder); }
+    }
+
+    &__modal-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 16px;
+    }
+
+    &__modal-btn-primary {
+        padding: 10px 24px;
+        border: none;
+        border-radius: 8px;
+        background: #059669;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 500;
+        font-family: inherit;
+        cursor: pointer;
+        transition: background 0.15s;
+
+        &:hover:not(:disabled) { background: #047857; }
+        &:disabled { opacity: 0.4; cursor: not-allowed; }
+    }
+
+    &__modal-btn {
+        padding: 10px 24px;
+        border: 1px solid var(--border-warm);
+        border-radius: 8px;
+        background: var(--bg-card);
+        color: var(--text-primary);
+        font-size: 14px;
+        font-weight: 500;
+        font-family: inherit;
+        cursor: pointer;
+        transition: background 0.15s;
+
+        &:hover { background: var(--bg-hover); }
+    }
+
+    // ── Footer (just message now) ──
+    &__footer {
+        margin-top: 16px;
+    }
+}
+
+@media (max-width: 640px) {
+    .cat-settings {
+        &__header { flex-direction: column; }
+    }
+}

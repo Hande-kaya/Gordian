@@ -1,0 +1,132 @@
+/**
+ * SampleExpense Styles - Mock invoice detail for tutorial
+ */
+
+.sample-expense {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10001;
+    width: 380px;
+    max-height: 80vh;
+    overflow-y: auto;
+
+    &__card {
+        background: var(--bg-white);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        padding: 20px;
+        box-shadow: var(--shadow-modal);
+    }
+
+    &__header {
+        margin-bottom: 16px;
+        text-align: center;
+    }
+
+    &__badge {
+        display: inline-block;
+        padding: 4px 12px;
+        background: #059669;
+        color: #fff;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    &__section {
+        margin-bottom: 16px;
+    }
+
+    &__section-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin: 0 0 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    &__fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    &__field {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+
+        &:first-child {
+            grid-column: 1 / -1;
+        }
+    }
+
+    &__label {
+        font-size: 10px;
+        font-weight: 500;
+        color: var(--text-muted);
+        text-transform: uppercase;
+    }
+
+    &__value {
+        font-size: 13px;
+        color: var(--text-primary);
+        font-weight: 500;
+    }
+
+    &__table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+
+        th {
+            text-align: left;
+            padding: 6px 8px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            background: var(--bg-table-header);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 5px 8px;
+            color: var(--text-table-cell);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        th:last-child,
+        td:last-child {
+            text-align: right;
+        }
+    }
+
+    &__totals {
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    &__total-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--text-secondary);
+        padding: 3px 0;
+
+        &--grand {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+            padding-top: 6px;
+            margin-top: 4px;
+            border-top: 1px solid var(--border-color);
+        }
+    }
+}

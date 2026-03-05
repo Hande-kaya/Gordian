@@ -1,0 +1,222 @@
+/**
+ * Tutorial Overlay Styles
+ * Spotlight cutout, tooltip bubble, pulse, arrows.
+ */
+
+$green-600: #059669;
+$green-700: #047857;
+
+.tutorial-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    pointer-events: none;
+
+    // Raise above modals (z-index 10003) for noBackdrop steps like export-modal
+    &--above-modal {
+        z-index: 10005;
+    }
+
+    // Allow clicks on tooltip buttons
+    .tutorial-tooltip {
+        pointer-events: auto;
+    }
+
+    &__backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        pointer-events: auto;
+    }
+
+    // Spotlight cutout — raised above backdrop
+    &__spotlight {
+        position: fixed;
+        z-index: 10001;
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+        border-radius: 10px;
+        transition: all 0.35s ease;
+        pointer-events: none;
+
+        &--pulse {
+            animation: tutorialPulse 2s ease-in-out infinite;
+            border: 2px solid rgba(5, 150, 105, 0.5);
+        }
+    }
+}
+
+// ── Tooltip ──
+.tutorial-tooltip {
+    position: fixed;
+    z-index: 10002;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    max-width: 380px;
+    animation: tutorialFadeIn 0.3s ease;
+
+    &--top,
+    &--bottom {
+        flex-direction: row;
+    }
+
+    &--left {
+        flex-direction: row-reverse;
+    }
+
+    &--right {
+        flex-direction: row;
+    }
+
+    &__avatar {
+        flex-shrink: 0;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    }
+
+    &__bubble {
+        background: var(--bg-white, #ffffff);
+        border: 1px solid var(--border-color, #e5e7eb);
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        min-width: 260px;
+    }
+
+    &__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+    }
+
+    &__title {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-primary, #111827);
+        margin: 0;
+    }
+
+    &__skip {
+        background: none;
+        border: none;
+        font-size: 12px;
+        color: var(--text-muted, #9ca3af);
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: inherit;
+
+        &:hover {
+            background: var(--bg-hover, #f3f4f6);
+            color: var(--text-primary, #111827);
+        }
+    }
+
+    &__desc {
+        font-size: 13px;
+        color: var(--text-secondary, #6b7280);
+        line-height: 1.5;
+        margin: 0 0 12px;
+    }
+
+    &__footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    &__counter {
+        font-size: 11px;
+        color: var(--text-muted, #9ca3af);
+        font-weight: 500;
+    }
+
+    &__nav {
+        display: flex;
+        gap: 8px;
+    }
+
+    &__btn {
+        padding: 6px 14px;
+        border: 1px solid var(--border-warm, #e5e2de);
+        border-radius: 8px;
+        background: var(--bg-primary, #faf9f7);
+        color: var(--text-primary, #111827);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+        font-family: inherit;
+
+        &:hover {
+            background: var(--bg-hover, #f3f4f6);
+        }
+
+        &--primary {
+            background: $green-600;
+            border-color: $green-600;
+            color: #ffffff;
+
+            &:hover {
+                background: $green-700;
+            }
+        }
+    }
+}
+
+// ── Animations ──
+@keyframes tutorialPulse {
+    0%, 100% {
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55),
+                    0 0 0 4px rgba(5, 150, 105, 0.6),
+                    0 0 20px 4px rgba(5, 150, 105, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55),
+                    0 0 0 12px rgba(5, 150, 105, 0),
+                    0 0 40px 12px rgba(5, 150, 105, 0);
+    }
+}
+
+@keyframes tutorialFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+// Bounce arrow pointing at target
+.tutorial-arrow {
+    position: fixed;
+    z-index: 10002;
+    animation: tutorialBounce 1.5s ease-in-out infinite;
+
+    &__svg {
+        fill: $green-600;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    }
+}
+
+@keyframes tutorialBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+// Brighten sidebar when tutorial overlay is active (otherwise too dark to see)
+body:has(.tutorial-overlay) [data-tutorial="sidebar"] {
+    background-color: #0d8c5f !important;
+    transition: background-color 0.3s ease;
+}
+
+// ── Mobile responsive ──
+@media (max-width: 768px) {
+    .tutorial-tooltip {
+        max-width: calc(100vw - 32px);
+
+        &__bubble {
+            min-width: 200px;
+        }
+
+        &__avatar {
+            display: none; // Hide avatar on mobile to save space
+        }
+    }
+}

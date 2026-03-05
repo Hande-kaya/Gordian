@@ -1,0 +1,169 @@
+// Filter Styles
+// =============
+@import './variables-import';
+
+// Column toggle panel
+.column-toggle-panel {
+  background: $color-bg-hover;
+  border: 1px solid $color-border;
+  border-radius: $radius-base;
+  padding: $spacing-base;
+  margin-bottom: $spacing-base;
+
+  .column-toggle-header {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-md;
+  }
+
+  .column-toggle-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-md;
+  }
+
+  .column-toggle-item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md / 2;
+    font-size: 13px;
+    color: $color-text-secondary;
+    cursor: pointer;
+
+    input[type="checkbox"] {
+      width: $spacing-base;
+      height: $spacing-base;
+      cursor: pointer;
+    }
+  }
+}
+
+// Filter input (general)
+.filter-input {
+  width: 100%;
+  padding: $spacing-md / 2 $spacing-sm;
+  border: 1px solid var(--border-input);
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  background: var(--bg-input);
+  color: var(--text-primary);
+
+  &:focus {
+    outline: none;
+    border-color: $color-accent;
+    background: var(--bg-input-focus);
+  }
+}
+
+// Column filter input (in table header)
+.column-filter-input {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  padding: $spacing-xs $spacing-md / 2 !important;
+  border: 1px solid var(--border-input) !important;
+  border-radius: $radius-sm !important;
+  font-size: $font-size-sm !important;
+  color: var(--text-primary) !important;
+  background: var(--bg-input) !important;
+
+  &::placeholder {
+    color: var(--placeholder) !important;
+    font-style: italic !important;
+    font-size: 11px !important;
+  }
+
+  &:focus {
+    outline: none !important;
+    border-color: $color-accent !important;
+    background: var(--bg-input-focus) !important;
+    box-shadow: 0 0 0 2px rgba($color-accent, 0.1) !important;
+  }
+}
+
+// Clear filters button
+.clear-filters-button {
+  padding: $spacing-md / 2 $spacing-md !important;
+  background: $color-error !important;
+  color: $color-bg-white !important;
+  border: none !important;
+  border-radius: $radius-sm !important;
+  font-size: $font-size-sm !important;
+  font-weight: $font-weight-medium !important;
+  cursor: pointer !important;
+  transition: background-color $transition-base !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+
+  &:hover {
+    background: darken($color-error, 10%) !important;
+  }
+}
+
+// Cell input for editing
+.cell-input {
+  width: 100%;
+  padding: $spacing-xs $spacing-sm;
+  border: 1px solid $color-accent;
+  border-radius: $radius-sm;
+  font-size: $font-size-base;
+  background: var(--bg-input);
+  color: var(--text-primary);
+
+  &:focus {
+    outline: none;
+    background: var(--bg-input-focus);
+    box-shadow: 0 0 0 2px rgba($color-accent, 0.2);
+  }
+}
+
+.cell-select {
+  min-width: 100px;
+}
+
+// Edit input
+.edit-input {
+  width: 100% !important;
+  padding: $spacing-xs $spacing-sm !important;
+  border: 1px solid $color-border-dark !important;
+  border-radius: $radius-sm !important;
+  font-size: $font-size-base !important;
+
+  &:focus {
+    outline: none !important;
+    border-color: $color-accent !important;
+    box-shadow: 0 0 0 2px rgba($color-accent, 0.1) !important;
+  }
+}
+
+// Action buttons
+.action-buttons {
+  display: flex !important;
+  gap: $spacing-sm !important;
+}
+
+.edit-btn,
+.delete-btn {
+  padding: $spacing-xs $spacing-sm !important;
+  border: 1px solid !important;
+  border-radius: $radius-sm !important;
+  font-size: $font-size-sm !important;
+  cursor: pointer !important;
+
+  &:hover {
+    opacity: 0.8 !important;
+  }
+}
+
+.edit-btn {
+  background: var(--bg-hover) !important;
+  border-color: var(--border-warm) !important;
+  color: var(--text-primary) !important;
+}
+
+.delete-btn {
+  background: var(--status-error-bg) !important;
+  border-color: var(--status-error-bg) !important;
+  color: var(--status-error-text) !important;
+}

@@ -1,0 +1,139 @@
+/**
+ * DocPreview component styles
+ */
+
+.doc-preview {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    &--loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 200px;
+    }
+
+    &--error {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 200px;
+        color: #dc2626;
+        font-size: 14px;
+    }
+
+    &--not-found {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 200px;
+    }
+
+    &__not-found {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        color: var(--text-muted, #94a3b8);
+
+        svg {
+            opacity: 0.5;
+        }
+
+        span {
+            font-size: 14px;
+            font-weight: 500;
+        }
+    }
+
+    &__content {
+        flex: 1;
+        overflow: auto;
+        padding: 8px;
+        text-align: center;
+
+        .react-pdf__Document { display: inline-block; line-height: 0; }
+        .react-pdf__Page { display: inline-block; line-height: 0; }
+        .react-pdf__Page__canvas { display: block; }
+    }
+
+    &__page-wrap {
+        position: relative;
+        display: inline-block;
+        line-height: 0;
+    }
+
+    &__highlight {
+        position: absolute;
+        left: 0;
+        right: 0;
+        background: rgba(59, 130, 246, 0.12);
+        border: 2px solid rgba(59, 130, 246, 0.5);
+        border-radius: 3px;
+        pointer-events: none;
+        z-index: 1;
+        animation: highlightPulse 1.5s ease-in-out 1;
+    }
+
+    @keyframes highlightPulse {
+        0% { background: rgba(59, 130, 246, 0.3); }
+        100% { background: rgba(59, 130, 246, 0.12); }
+    }
+
+    &__controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 6px 8px;
+        border-top: 1px solid var(--border-color, #e2e8f0);
+        flex-shrink: 0;
+
+        button {
+            width: 26px;
+            height: 26px;
+            border: 1px solid var(--border-color, #e2e8f0);
+            border-radius: 5px;
+            background: transparent;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary, #64748b);
+
+            &:hover:not(:disabled) { background: var(--bg-hover, #f1f5f9); }
+            &:disabled { opacity: 0.4; cursor: not-allowed; }
+        }
+    }
+
+    &__zoom {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    &__zoom-level {
+        width: auto !important;
+        padding: 0 6px;
+        font-size: 11px !important;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-muted, #94a3b8) !important;
+        border-color: transparent !important;
+        &:hover:not(:disabled) { color: var(--primary-color, #3b82f6) !important; }
+    }
+
+    &__pagination {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        span {
+            font-size: 11px;
+            color: var(--text-muted, #94a3b8);
+            font-variant-numeric: tabular-nums;
+        }
+    }
+}

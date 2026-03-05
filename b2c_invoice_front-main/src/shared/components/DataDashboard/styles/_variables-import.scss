@@ -1,0 +1,29 @@
+// Import design tokens from main variables
+@import '../../../styles/variables.scss';
+
+// DataDashboard-specific colors (derived from variables)
+// NOTE: For theme-aware colors, use var(--xxx) directly in styles.
+// These SCSS vars are only used where CSS custom props can't work (e.g. Sass functions).
+$table-header-bg: $color-bg-hover;
+$table-border: $color-border;
+$table-border-dark: $color-border-dark;
+
+// Status colors — use CSS custom props where possible:
+// var(--status-success-bg), var(--status-error-bg), var(--status-warning-bg)
+$status-active-bg: #ecfdf5;
+$status-active-color: #059669;
+$status-inactive-bg: #fef2f2;
+$status-inactive-color: #dc2626;
+$status-pending-bg: #fffbeb;
+$status-pending-color: #d97706;
+
+// Row highlight colors
+$row-mentioned-bg: #4292c6;
+$row-mentioned-hover: #2171b5;
+$row-unread-bg: #969696;
+$row-unread-hover: #737373;
+$row-selected-border: #059669;
+$row-selected-hover: #047857;
+
+// Spinner color
+$spinner-color: #337AB7;

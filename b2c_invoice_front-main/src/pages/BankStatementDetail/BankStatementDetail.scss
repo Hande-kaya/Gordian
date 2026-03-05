@@ -1,0 +1,184 @@
+/**
+ * BankStatementDetail Page Styles
+ * Pattern: adapted from InvoiceDetail.scss
+ */
+
+@import '../../shared/styles/variables.scss';
+@import '../../shared/components/HeaderActions/HeaderActions.scss';
+
+// Reuse highlight toggle from InvoiceDetail
+.highlight-toggle {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px 6px 10px; border-radius: 8px;
+    border: 1px solid var(--border-color); background: var(--bg-white);
+    cursor: pointer; transition: all 0.2s; user-select: none;
+
+    &:hover { border-color: #d4a017; background: rgba(251, 191, 36, 0.06); }
+
+    &__icon { color: var(--text-muted); transition: all 0.2s; flex-shrink: 0; }
+    &__label { font-size: 12px; font-weight: 500; color: var(--text-secondary); transition: color 0.2s; }
+    &__dot {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: var(--border-color); transition: all 0.2s; flex-shrink: 0;
+    }
+
+    &--active {
+        border-color: #f59e0b; background: rgba(251, 191, 36, 0.1);
+        box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.15);
+        .highlight-toggle__icon { color: #d97706; fill: rgba(251, 191, 36, 0.3); }
+        .highlight-toggle__label { color: #92400e; font-weight: 600; }
+        .highlight-toggle__dot { background: #f59e0b; box-shadow: 0 0 6px rgba(245, 158, 11, 0.6); }
+        &:hover { border-color: #d97706; background: rgba(251, 191, 36, 0.15); }
+    }
+}
+
+// Compact header
+.layout__main:has(.bank-statement-detail) {
+    .layout__header {
+        padding: 24px 32px 0 32px;
+        gap: 8px;
+    }
+    .layout__page-title { font-size: $font-size-xl; margin-bottom: 0; }
+    .layout__page-description { font-size: $font-size-sm; margin-top: 2px; }
+    .layout__header-actions { display: flex; gap: 8px; }
+    .layout__content { padding-top: $spacing-base; }
+}
+
+.bank-statement-detail {
+    padding: 0 24px 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+
+    &__body {
+        display: grid;
+        grid-template-columns: minmax(400px, 1fr) minmax(380px, 1fr);
+        gap: 24px;
+        align-items: start;
+    }
+
+    &__pdf-col {
+        position: sticky;
+        top: 24px;
+    }
+
+    &__fields-col {
+        min-width: 0;
+    }
+
+    &__loading, &__error {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 300px;
+        font-size: 16px;
+        color: var(--text-secondary);
+    }
+    &__error { color: #991b1b; }
+}
+
+// ========================================
+// TransactionsTable styles
+// ========================================
+.transactions-section {
+    margin-bottom: 16px;
+    padding: 16px;
+    background: var(--bg-white);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+
+    &__title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0 0 12px 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    &__count {
+        font-weight: 400;
+        color: var(--text-secondary);
+        margin-left: 6px;
+        font-size: 13px;
+    }
+
+    &__empty {
+        font-size: 13px;
+        color: var(--text-secondary);
+        padding: 16px 0;
+    }
+
+    &__table-wrap {
+        overflow-x: auto;
+    }
+
+    &__table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+
+        th, td {
+            padding: 6px 8px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        th {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            background: var(--bg-table-header);
+            white-space: nowrap;
+
+            &.sortable {
+                cursor: pointer;
+                user-select: none;
+                &:hover { color: var(--text-primary); }
+            }
+        }
+
+        td { color: var(--text-table-cell); }
+        td.num-cell { text-align: right; font-variant-numeric: tabular-nums; }
+
+        .col-num { width: 32px; text-align: center; }
+        .col-date { width: 100px; }
+        .col-debit, .col-credit { width: 120px; text-align: right; }
+        .col-balance { width: 120px; text-align: right; }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: var(--bg-hover); }
+
+        tfoot {
+            .totals-row {
+                td {
+                    border-top: 2px solid var(--border-color);
+                    border-bottom: none;
+                    font-weight: 600;
+                    background: var(--bg-table-header);
+                }
+            }
+            .totals-label {
+                text-align: right;
+                font-size: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.03em;
+                color: var(--text-secondary);
+            }
+            .totals-value {
+                font-variant-numeric: tabular-nums;
+            }
+        }
+    }
+}
+
+// Responsive
+@media (max-width: 900px) {
+    .bank-statement-detail__body {
+        grid-template-columns: 1fr;
+    }
+    .bank-statement-detail__pdf-col {
+        position: static;
+    }
+}

@@ -1,0 +1,374 @@
+/**
+ * Files Page Styles — Card-based layout with folder navigation
+ */
+
+@import '../../shared/styles/variables.scss';
+
+.files {
+    padding: 0;
+
+    // Folder cards
+    &__folders {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 28px;
+    }
+
+    // Loading state
+    &__loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 80px 20px;
+        color: var(--text-secondary);
+        font-size: $font-size-base;
+    }
+    &__loading-spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid var(--border-color);
+        border-top-color: $color-accent;
+        border-radius: 50%;
+        animation: filesSpin 0.8s linear infinite;
+    }
+
+    // Empty state
+    &__empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        max-width: 400px;
+        margin: 0 auto;
+        padding: 80px 20px 60px;
+        animation: filesFadeIn 0.4s ease;
+    }
+    &__empty-illustration {
+        margin-bottom: 24px;
+        opacity: 0.85;
+    }
+    &__empty-title {
+        font-size: 18px;
+        font-weight: $font-weight-semibold;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    // Card grid
+    &__grid {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        animation: filesFadeIn 0.3s ease;
+    }
+
+    // Confirmation modal
+    &__modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        animation: filesFadeIn 0.2s ease;
+    }
+    &__modal {
+        background: var(--bg-white);
+        border-radius: $radius-lg;
+        padding: 32px;
+        max-width: 420px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    }
+    &__modal-icon {
+        margin-bottom: 16px;
+    }
+    &__modal-title {
+        font-size: 18px;
+        font-weight: $font-weight-semibold;
+        color: var(--text-primary);
+        margin: 0 0 8px;
+    }
+    &__modal-text {
+        font-size: $font-size-base;
+        color: var(--text-secondary);
+        margin: 0 0 24px;
+        line-height: 1.5;
+    }
+    &__modal-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+    }
+    &__modal-cancel {
+        padding: 10px 24px;
+        border: 1px solid var(--border-color);
+        border-radius: $radius-md;
+        background: var(--bg-white);
+        color: var(--text-secondary);
+        font-size: $font-size-base;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        &:hover:not(:disabled) {
+            background: var(--bg-hover);
+        }
+        &:disabled { opacity: 0.5; cursor: not-allowed; }
+    }
+    &__modal-confirm {
+        padding: 10px 24px;
+        border: none;
+        border-radius: $radius-md;
+        background: #ef4444;
+        color: #fff;
+        font-size: $font-size-base;
+        font-weight: $font-weight-medium;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        &:hover:not(:disabled) {
+            background: #dc2626;
+        }
+        &:disabled { opacity: 0.6; cursor: not-allowed; }
+    }
+}
+
+// Folder card (macOS-style)
+.files-folder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 28px 16px 20px;
+    background: var(--bg-white);
+    border: 2px solid var(--border-color);
+    border-radius: $radius-xl;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+
+    &:hover {
+        border-color: var(--folder-color);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        transform: translateY(-3px);
+    }
+
+    &--active {
+        border-color: var(--folder-color);
+        background: var(--bg-white);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+        .files-folder__label {
+            color: var(--text-primary);
+            font-weight: $font-weight-bold;
+        }
+    }
+
+    &__svg {
+        flex-shrink: 0;
+        transition: transform 0.2s ease;
+    }
+
+    &:hover &__svg {
+        transform: scale(1.08);
+    }
+
+    &__label {
+        font-size: $font-size-base;
+        font-weight: $font-weight-semibold;
+        color: var(--text-secondary);
+        transition: color 0.15s ease;
+        text-align: center;
+    }
+
+    &__badge {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        border-radius: $radius-full;
+        background: var(--folder-color);
+        color: #fff;
+        font-size: 11px;
+        font-weight: $font-weight-bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        animation: filesFadeIn 0.2s ease;
+    }
+}
+
+// Individual file card
+.files-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    background: var(--bg-white);
+    border: 1px solid var(--border-color);
+    border-radius: $radius-lg;
+    transition: all 0.2s ease;
+    animation: filesSlideIn 0.3s ease both;
+
+    &:hover {
+        border-color: var(--text-muted);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    &__icon {
+        flex-shrink: 0;
+        color: var(--text-muted);
+        display: flex;
+    }
+
+    &__body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__filename {
+        font-size: $font-size-base;
+        font-weight: $font-weight-semibold;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 4px;
+    }
+
+    &__meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 2px;
+    }
+
+    &__supplier {
+        font-size: $font-size-sm;
+        color: var(--text-secondary);
+    }
+
+    &__amount {
+        font-size: $font-size-sm;
+        font-weight: $font-weight-semibold;
+        color: var(--text-primary);
+    }
+
+    &__size {
+        font-size: $font-size-sm;
+        color: var(--text-muted);
+    }
+
+    &__dates {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    &__doc-date {
+        font-size: $font-size-sm;
+        color: var(--text-secondary);
+        font-weight: $font-weight-medium;
+    }
+
+    &__upload-date {
+        font-size: 11px;
+        color: var(--text-muted);
+    }
+
+    &__actions {
+        flex-shrink: 0;
+        display: flex;
+        gap: 8px;
+    }
+
+    &__download-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border: 1px solid rgba($color-accent, 0.3);
+        border-radius: $radius-md;
+        background: rgba($color-accent, 0.06);
+        color: $color-accent;
+        font-size: $font-size-sm;
+        font-weight: $font-weight-medium;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+
+        svg { flex-shrink: 0; }
+
+        &:hover {
+            background: rgba($color-accent, 0.12);
+            border-color: $color-accent;
+            box-shadow: 0 2px 6px rgba($color-accent, 0.15);
+        }
+    }
+
+    &__delete-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border: 1px solid rgba(#ef4444, 0.3);
+        border-radius: $radius-md;
+        background: rgba(#ef4444, 0.06);
+        color: #ef4444;
+        font-size: $font-size-sm;
+        font-weight: $font-weight-medium;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+
+        svg { flex-shrink: 0; }
+
+        &:hover {
+            background: rgba(#ef4444, 0.12);
+            border-color: #ef4444;
+            box-shadow: 0 2px 6px rgba(#ef4444, 0.15);
+        }
+    }
+}
+
+// Animations
+@keyframes filesFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes filesSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes filesSpin {
+    to { transform: rotate(360deg); }
+}
+
+// Responsive
+@media (max-width: 600px) {
+    .files__folders {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    .files-folder {
+        flex-direction: row;
+        padding: 16px 20px;
+        gap: 12px;
+        &__svg { width: 40px; height: 32px; }
+    }
+    .files-card {
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 14px;
+
+        &__body { width: 100%; order: 0; }
+        &__icon { order: -1; }
+        &__actions { order: 1; margin-left: auto; flex-wrap: wrap; }
+    }
+}

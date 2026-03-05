@@ -1,0 +1,357 @@
+/**
+ * OnboardingWizard Styles
+ * Full-screen overlay with centered card, theme/lang preview cards.
+ */
+
+$green-600: #059669;
+$green-700: #047857;
+$green-500: #10b981;
+$green-50: #ecfdf5;
+
+.onboarding-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: onbFadeIn 0.3s ease;
+}
+
+.onboarding-wizard {
+    background: var(--bg-white);
+    border-radius: 20px;
+    width: 90%;
+    max-width: 520px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25);
+    animation: onbSlideUp 0.35s ease;
+    overflow: hidden;
+
+    &__content {
+        padding: 40px 36px 24px;
+    }
+
+    &__nav {
+        display: flex;
+        justify-content: space-between;
+        padding: 0 36px 20px;
+        gap: 12px;
+    }
+
+    &__nav-btn {
+        padding: 10px 24px;
+        border: 1px solid var(--border-warm, #e5e2de);
+        border-radius: 10px;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+        font-family: inherit;
+
+        &:hover {
+            background: var(--bg-hover);
+        }
+
+        &--primary {
+            background: $green-600;
+            border-color: $green-600;
+            color: #ffffff;
+            margin-left: auto;
+
+            &:hover {
+                background: $green-700;
+            }
+        }
+    }
+
+    &__dots {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        padding: 0 36px 28px;
+    }
+
+    &__dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--border-color, #e5e7eb);
+        transition: all 0.3s ease;
+
+        &--active {
+            background: $green-600;
+            width: 24px;
+            border-radius: 4px;
+        }
+
+        &--done {
+            background: $green-500;
+        }
+    }
+}
+
+// ── Wizard Step Base ──
+.wizard-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+
+    &__avatar {
+        margin-bottom: 20px;
+    }
+
+    &__title {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 8px;
+        letter-spacing: -0.02em;
+    }
+
+    &__desc {
+        font-size: 15px;
+        color: var(--text-secondary);
+        margin: 0 0 28px;
+        line-height: 1.5;
+        max-width: 380px;
+    }
+
+    &__actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+        max-width: 260px;
+    }
+
+    &__btn {
+        padding: 12px 28px;
+        border: none;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+        font-family: inherit;
+
+        &--primary {
+            background: $green-600;
+            color: #ffffff;
+
+            &:hover { background: $green-700; }
+        }
+
+        &--ghost {
+            background: transparent;
+            color: var(--text-muted);
+
+            &:hover {
+                color: var(--text-primary);
+                background: var(--bg-hover);
+            }
+        }
+    }
+}
+
+// ── Theme Cards ──
+.theme-cards {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+}
+
+.theme-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 14px;
+    border: 2px solid var(--border-warm, #e5e2de);
+    border-radius: 14px;
+    background: var(--bg-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    font-family: inherit;
+
+    &:hover {
+        border-color: var(--border-color);
+        background: var(--bg-white);
+    }
+
+    &--selected {
+        border-color: $green-600;
+        background: $green-50;
+        box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+    }
+
+    &__preview {
+        width: 100%;
+        height: 64px;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 10px;
+    }
+
+    &__info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    &__label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    &__desc {
+        font-size: 11px;
+        color: var(--text-muted);
+    }
+
+    &__check {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 20px;
+        height: 20px;
+        background: $green-600;
+        color: #fff;
+        border-radius: 50%;
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+// Theme Preview Mockups
+.theme-preview {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    border-radius: 6px;
+    overflow: hidden;
+
+    &--light {
+        background: #faf9f7;
+        .theme-preview__sidebar { background: #064e3b; width: 24%; }
+        .theme-preview__content { background: #ffffff; flex: 1; padding: 8px; }
+        .theme-preview__line { height: 6px; background: #e5e7eb; border-radius: 3px; margin-bottom: 4px; }
+        .theme-preview__line--short { width: 60%; }
+    }
+
+    &--dark {
+        background: #121212;
+        .theme-preview__sidebar { background: #0a2e1f; width: 24%; }
+        .theme-preview__content { background: #1e1e1e; flex: 1; padding: 8px; }
+        .theme-preview__line { height: 6px; background: #333; border-radius: 3px; margin-bottom: 4px; }
+        .theme-preview__line--short { width: 60%; }
+    }
+
+    &--system {
+        display: flex;
+
+        .theme-preview--split-left,
+        .theme-preview--split-right {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .theme-preview--split-left {
+            .theme-preview__sidebar { background: #064e3b; width: 24%; }
+            .theme-preview__content { background: #ffffff; flex: 1; padding: 6px; }
+            .theme-preview__line { height: 5px; background: #e5e7eb; border-radius: 3px; }
+        }
+
+        .theme-preview--split-right {
+            .theme-preview__sidebar { background: #0a2e1f; width: 24%; }
+            .theme-preview__content { background: #1e1e1e; flex: 1; padding: 6px; }
+            .theme-preview__line { height: 5px; background: #333; border-radius: 3px; }
+        }
+    }
+}
+
+// ── Language Cards ──
+.lang-cards {
+    display: flex;
+    gap: 16px;
+    width: 100%;
+}
+
+.lang-card {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 20px;
+    border: 2px solid var(--border-warm, #e5e2de);
+    border-radius: 14px;
+    background: var(--bg-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    font-family: inherit;
+
+    &:hover {
+        border-color: var(--border-color);
+        background: var(--bg-white);
+    }
+
+    &--selected {
+        border-color: $green-600;
+        background: $green-50;
+        box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+    }
+
+    &__flag {
+        font-size: 28px;
+        line-height: 1;
+    }
+
+    &__label {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    &__check {
+        position: absolute;
+        top: 10px;
+        right: 12px;
+        font-size: 14px;
+        font-weight: 700;
+        color: $green-600;
+    }
+}
+
+// ── Animations ──
+@keyframes onbFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes onbSlideUp {
+    from { opacity: 0; transform: translateY(20px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+// ── Responsive ──
+@media (max-width: 540px) {
+    .onboarding-wizard {
+        max-width: 95%;
+        &__content { padding: 28px 20px 16px; }
+        &__nav { padding: 0 20px 16px; }
+        &__dots { padding: 0 20px 20px; }
+    }
+
+    .theme-cards { flex-direction: column; }
+    .lang-cards { flex-direction: column; }
+}

@@ -1,0 +1,497 @@
+/**
+ * B2C Theme - Green Identity Override
+ * ====================================
+ * Overrides shared component styles for the B2C consumer app.
+ * Uses CSS specificity (no !important where possible) to theme
+ * the sidebar, layout, buttons, and tables with a green palette.
+ *
+ * Color palette extracted from the auth/login page design.
+ *
+ * Dark-mode support: backgrounds, text, borders, and shadows
+ * reference CSS custom properties from _theme-variables.scss.
+ * Brand greens ($b2c-green-*) stay constant across themes.
+ */
+
+// ========================================
+// Green Color Tokens
+// ========================================
+$b2c-green-900: #064e3b;
+$b2c-green-800: #065f46;
+$b2c-green-700: #047857;
+$b2c-green-600: #059669;
+$b2c-green-500: #10b981;
+$b2c-green-400: #34d399;
+$b2c-green-100: #d1fae5;
+$b2c-green-50: #ecfdf5;
+
+$b2c-bg-main: #faf9f7;
+$b2c-bg-hover: #f5f3f0;
+
+// ========================================
+// Sidebar — Dark Green
+// ========================================
+// Sidebar sits on a constant dark-green background;
+// white text/icon colors are intentional and do NOT
+// switch with the theme.
+// body prefix for higher specificity over lazy-loaded Sidebar.scss
+body .sidebar {
+    background-color: var(--bg-sidebar);
+    border-right: none;
+}
+
+body .sidebar__header {
+    background-color: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body .sidebar__logo {
+    margin-left: 12px;
+}
+
+body .sidebar__logo-icon {
+    color: #ffffff;
+}
+
+body .sidebar__logo-text {
+    color: #ffffff;
+}
+
+// Navigation
+body .sidebar__separator {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+body .sidebar__nav-item:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+body .sidebar__nav-item--active {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-left: 4px solid $b2c-green-400;
+
+    .sidebar__nav-label {
+        color: #ffffff;
+    }
+
+    .sidebar__nav-icon {
+        color: $b2c-green-400;
+    }
+}
+
+body .sidebar__nav-icon {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+body .sidebar__nav-label {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+body .sidebar__nav-badge {
+    background-color: $b2c-green-600;
+    color: #ffffff;
+}
+
+body .sidebar__nav-chevron {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+body .sidebar__nav-item--parent-active .sidebar__nav-label {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+body .sidebar__nav-item--child {
+    .sidebar__nav-label {
+        color: rgba(255, 255, 255, 0.6);
+
+        &::before {
+            color: rgba(255, 255, 255, 0.3);
+        }
+    }
+
+    &.sidebar__nav-item--active {
+        background-color: rgba(255, 255, 255, 0.08);
+        border-left-color: $b2c-green-400;
+
+        .sidebar__nav-label {
+            color: $b2c-green-400;
+
+            &::before {
+                color: $b2c-green-400;
+            }
+        }
+    }
+}
+
+// Footer
+body .sidebar__footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: transparent;
+}
+
+body .sidebar__user-avatar {
+    background-color: $b2c-green-600;
+    color: #ffffff;
+}
+
+body .sidebar__user-name {
+    color: #ffffff;
+}
+
+body .sidebar__user-email {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+body .sidebar__logout {
+    color: rgba(255, 255, 255, 0.5);
+
+    &:hover {
+        background-color: rgba(255, 255, 255, 0.08);
+        color: #fca5a5;
+    }
+}
+
+body .sidebar__lang-toggle {
+    border-color: rgba(255, 255, 255, 0.2);
+    background-color: transparent;
+    color: rgba(255, 255, 255, 0.7);
+
+    &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.4);
+        color: #ffffff;
+    }
+}
+
+// ========================================
+// Layout — Content-Flow (no header bar)
+// body prefix for higher specificity over lazy-loaded Layout.scss
+// ========================================
+body .layout {
+    background-color: var(--bg-primary);
+
+    .layout__main {
+        background-color: var(--bg-primary);
+    }
+
+    .layout__header {
+        background: transparent;
+        border-bottom: none;
+        box-shadow: none;
+        padding: 32px 32px 0 32px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .layout__header-actions {
+        width: 100%;
+    }
+
+    .layout__page-title {
+        font-family: 'Inter', -apple-system, sans-serif;
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text-primary);
+        letter-spacing: -0.02em;
+    }
+
+    .layout__page-description {
+        color: var(--text-muted);
+        font-size: 15px;
+    }
+
+    .layout__content {
+        background-color: var(--bg-primary);
+        padding-top: 8px;
+    }
+}
+
+// ========================================
+// DataDashboard Toolbar — Ghost Pill Buttons
+// (body prefix beats shared component specificity)
+// ========================================
+body .admin-v2-header-actions,
+body .header-actions {
+    border: none !important;
+    border-radius: 0 !important;
+    background-color: transparent !important;
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+
+    .action-button {
+        border: 1px solid var(--border-warm) !important;
+        border-radius: 20px !important;
+        background-color: var(--bg-primary) !important;
+        color: var(--text-button) !important;
+        font-size: 13px !important;
+        padding: 7px 16px !important;
+
+        &:last-child {
+            border-right: 1px solid var(--border-warm) !important;
+        }
+
+        &:hover:not(:disabled) {
+            background-color: $b2c-green-50 !important;
+            color: $b2c-green-700 !important;
+            border-color: $b2c-green-400 !important;
+        }
+
+        &:disabled {
+            color: var(--disabled-text) !important;
+            border-color: var(--disabled-border) !important;
+            background-color: transparent !important;
+        }
+
+        &.action-button-primary {
+            background-color: $b2c-green-600 !important;
+            border-color: $b2c-green-600 !important;
+            color: #ffffff !important;
+
+            &:hover:not(:disabled) {
+                background-color: $b2c-green-700 !important;
+                border-color: $b2c-green-700 !important;
+                color: #ffffff !important;
+            }
+        }
+
+        &.action-button-success {
+            background-color: $b2c-green-500 !important;
+            border-color: $b2c-green-500 !important;
+            color: #ffffff !important;
+
+            &:hover:not(:disabled) {
+                background-color: $b2c-green-700 !important;
+                border-color: $b2c-green-700 !important;
+                color: #ffffff !important;
+            }
+        }
+    }
+}
+
+// Standalone header buttons (InvoiceDetail)
+body .header-action-btn {
+    border-radius: 20px !important;
+    padding: 7px 16px !important;
+    background: var(--bg-primary) !important;
+    border-color: var(--border-warm) !important;
+    color: var(--text-button) !important;
+
+    &:hover:not(:disabled) {
+        background: $b2c-green-50 !important;
+        border-color: $b2c-green-400 !important;
+        color: $b2c-green-700 !important;
+    }
+
+    &.active {
+        background: $b2c-green-50 !important;
+        border-color: $b2c-green-600 !important;
+        color: $b2c-green-600 !important;
+    }
+
+    &.header-action-btn--primary {
+        background: $b2c-green-600 !important;
+        border-color: $b2c-green-600 !important;
+        color: #ffffff !important;
+
+        &:hover:not(:disabled) {
+            background: $b2c-green-700 !important;
+            border-color: $b2c-green-700 !important;
+            color: #ffffff !important;
+        }
+    }
+
+    &.header-action-btn--danger {
+        color: #dc2626 !important;
+        &:hover:not(:disabled) {
+            background: #fef2f2 !important;
+            border-color: #fca5a5 !important;
+        }
+    }
+}
+
+// ========================================
+// DataDashboard Card Wrapper
+// ========================================
+body .data-dashboard-content {
+    background: var(--bg-white) !important;
+    border-radius: 16px !important;
+    border: 1px solid var(--border-card) !important;
+    border-top: 3px solid $b2c-green-500 !important;
+    box-shadow: var(--shadow-card) !important;
+    padding: 24px 28px !important;
+}
+
+body .data-dashboard-content .search-actions-bar {
+    padding-bottom: 16px !important;
+    margin-bottom: 0 !important;
+    border-bottom: none !important;
+}
+
+// Table inside card — no own border
+body .data-dashboard-content .data-table-container {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+// ========================================
+// Table — Warm, Soft, Zebra Green
+// ========================================
+body .data-table-container .data-table {
+    th {
+        background-color: var(--bg-table-header) !important;
+        font-weight: 500 !important;
+        color: var(--text-table-header) !important;
+        font-size: 11px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.06em !important;
+        border-bottom: 2px solid var(--border-table) !important;
+        border-right: none !important;
+        box-shadow: none !important;
+        padding: 10px 12px !important;
+    }
+
+    td {
+        border-bottom: 1px solid var(--border-light) !important;
+        border-right: none !important;
+        color: var(--text-table-cell) !important;
+        font-size: 13px !important;
+        padding: 13px 12px !important;
+    }
+
+    // Zebra — subtle green tint on even rows
+    tbody tr {
+        transition: background-color 0.15s ease !important;
+    }
+
+    tbody tr:nth-child(even) {
+        background-color: var(--bg-table-even) !important;
+    }
+
+    tbody tr:nth-child(odd) {
+        background-color: var(--bg-table-odd) !important;
+    }
+
+    tbody tr:hover {
+        background-color: var(--bg-table-hover) !important;
+    }
+}
+
+// ========================================
+// Search Bar — Rounder & Warmer
+// ========================================
+body .search-field {
+    max-width: 100% !important;
+    min-width: 0 !important;
+}
+
+body .search-input {
+    border-radius: 10px !important;
+    border: 1px solid var(--border-warm) !important;
+    background-color: var(--bg-input) !important;
+    padding: 11px 16px !important;
+    font-size: 14px !important;
+    width: 100% !important;
+    transition: all 0.2s ease !important;
+
+    &:focus {
+        border-color: $b2c-green-600 !important;
+        box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1) !important;
+        background-color: var(--bg-input-focus) !important;
+    }
+
+    &::placeholder {
+        color: var(--placeholder) !important;
+    }
+}
+
+// ========================================
+// Filter Inputs — Subtle & Warm
+// ========================================
+body .column-filter-input,
+body .filter-input {
+    border: 1px solid var(--border-card) !important;
+    border-radius: 8px !important;
+    background-color: var(--bg-input) !important;
+    font-size: 11px !important;
+    padding: 6px 8px !important;
+
+    &:focus {
+        border-color: $b2c-green-600 !important;
+        box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.08) !important;
+        background-color: var(--bg-input-focus) !important;
+    }
+
+    &::placeholder {
+        color: var(--disabled-text) !important;
+        font-style: normal !important;
+    }
+}
+
+body .filter-row th {
+    border-right: none !important;
+    border-bottom: none !important;
+    padding: 6px 8px !important;
+}
+
+// ========================================
+// Checkbox — Green Accent
+// ========================================
+body .selection-column input[type="checkbox"] {
+    accent-color: $b2c-green-600;
+    width: 16px !important;
+    height: 16px !important;
+}
+
+// Prevent dots/markers next to checkboxes
+body .data-table .selection-column,
+body .data-table td.selection-column,
+body .data-table th.selection-column {
+    list-style: none !important;
+    list-style-type: none !important;
+
+    &::before, &::after {
+        display: none !important;
+        content: none !important;
+    }
+}
+
+// ========================================
+// Focus / Selection Accent Override
+// ========================================
+.field-section__input:focus {
+    border-color: $b2c-green-600;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+}
+
+.line-items-section__add-btn:hover {
+    border-color: $b2c-green-600;
+    color: $b2c-green-600;
+    background: $b2c-green-50;
+}
+
+.line-items-section__table--editing input:focus {
+    border-color: $b2c-green-600;
+}
+
+// Confirm modal primary button
+.confirm-modal__btn--primary {
+    background: $b2c-green-600;
+    border-color: $b2c-green-600;
+
+    &:hover {
+        background: $b2c-green-700;
+    }
+}
+
+// Period selector active button
+.dashboard__period-btn--active,
+.dashboard__group-btn--active {
+    color: $b2c-green-600;
+}
+
+// Action card hover
+.dashboard__action-card:hover {
+    background: $b2c-green-50;
+    border-color: $b2c-green-600;
+}

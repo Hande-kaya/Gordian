@@ -1,0 +1,107 @@
+// Responsive Styles
+// =================
+@import './variables-import';
+
+// Tablet and smaller
+@media (max-width: 768px) {
+  .search-actions-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .search-field {
+    max-width: none !important;
+  }
+
+  .data-table {
+    font-size: $font-size-sm !important;
+
+    th,
+    td {
+      padding: $spacing-sm !important;
+    }
+  }
+
+  .action-buttons {
+    flex-direction: column !important;
+  }
+}
+
+// Print styles
+@media print {
+  .search-actions-bar,
+  .action-buttons,
+  .selection-column {
+    display: none !important;
+  }
+
+  .data-table {
+    border: 1px solid #000 !important;
+
+    th,
+    td {
+      border: 1px solid #000 !important;
+    }
+  }
+}
+
+// Edit category selector
+.edit-category-selector {
+  min-width: 200px;
+
+  .category-selector__trigger {
+    min-height: 32px;
+    padding: $spacing-xs $spacing-sm;
+    font-size: $font-size-sm;
+    background-color: $color-bg-white !important;
+    border: 1px solid $color-border-dark !important;
+    box-shadow: none !important;
+    color: $color-text-primary !important;
+  }
+
+  .category-selector__dropdown {
+    max-height: 200px;
+    z-index: 10000 !important;
+    position: relative !important;
+    background-color: $color-bg-white !important;
+    border: 1px solid $color-border-dark !important;
+    box-shadow: $shadow-lg !important;
+  }
+
+  .category-selector__option {
+    background-color: $color-bg-white !important;
+    font-size: $font-size-sm !important;
+    padding: $spacing-md / 2 $spacing-sm + 2 !important;
+
+    &.selected {
+      background-color: $color-accent-light !important;
+      color: $color-accent-hover !important;
+    }
+
+    &:hover {
+      background-color: $color-bg-hover !important;
+    }
+  }
+
+  .category-selector__option-name {
+    font-size: $font-size-sm !important;
+  }
+
+  .category-selector__option-description {
+    font-size: 11px !important;
+  }
+}
+
+// Dropdown z-index fixes
+.dropdown-menu,
+.select-dropdown,
+.category-dropdown,
+.recommended-dropdown {
+  z-index: 10000 !important;
+  position: relative !important;
+}
+
+.company-selector__dropdown {
+  z-index: 10000 !important;
+  position: absolute !important;
+}
