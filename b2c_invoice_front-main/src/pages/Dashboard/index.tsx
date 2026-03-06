@@ -36,6 +36,9 @@ const PERIOD_TO_GROUP: Record<string, string> = {
     'all': 'month',
 };
 
+const formatCategoryKey = (key: string): string =>
+    key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
 const Dashboard: React.FC = () => {
     const { t } = useLang();
     const { getLabelByKey } = useCategories();
@@ -259,7 +262,7 @@ const Dashboard: React.FC = () => {
                                         : <path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                     }
                                 </svg>
-                                {getLabelByKey(cat)}
+                                {formatCategoryKey(getLabelByKey(cat))}
                             </button>
                         ))}
                     </div>

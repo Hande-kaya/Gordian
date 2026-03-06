@@ -5,6 +5,17 @@
 
 @import '../../shared/styles/variables.scss';
 
+:root {
+    --pie-color-1: #3b82f6;
+    --pie-color-2: #10b981;
+    --pie-color-3: #f59e0b;
+    --pie-color-4: #ef4444;
+    --pie-color-5: #8b5cf6;
+    --pie-color-6: #ec4899;
+    --pie-color-7: #06b6d4;
+    --pie-color-8: #84cc16;
+}
+
 .dashboard {
     display: flex;
     flex-direction: column;
@@ -43,9 +54,9 @@
             transition: width 0.2s ease;
         }
 
-        &--total::before { background: #3b82f6; }
-        &--matched::before { background: #10b981; }
-        &--discrepancy::before { background: #f59e0b; }
+        &--total::before { background: var(--pie-color-1); }
+        &--matched::before { background: var(--pie-color-2); }
+        &--discrepancy::before { background: var(--pie-color-3); }
         &--pending::before { background: #6b7280; }
 
         &--clickable {
@@ -228,8 +239,8 @@
             box-shadow: $shadow-sm;
         }
 
-        &--expense { color: #ef4444; }
-        &--income { color: #10b981; }
+        &--expense { color: var(--pie-color-4); }
+        &--income { color: var(--pie-color-2); }
     }
 
     // Toolbar (period + filter on same row)
@@ -474,7 +485,7 @@
         color: var(--text-muted);
     }
 
-    // Category Table
+    // Category Table (old - kept for safety)
     &__category-table {
         width: 100%;
         border-collapse: collapse;
@@ -512,7 +523,7 @@
         color: var(--text-secondary);
     }
 
-    // Category Grid
+    // Category Grid (old - kept for safety)
     &__category-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
@@ -560,6 +571,118 @@
     &__category-chart {
         width: 100%;
         height: 80px;
+    }
+
+    // Pie Chart
+    &__pie-wrapper {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: $spacing-lg;
+    }
+
+    &__pie-chart-area {
+        position: relative;
+        width: 300px;
+        flex-shrink: 0;
+    }
+
+    &__pie-center {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        pointer-events: none;
+    }
+
+    &__pie-center-pct {
+        font-size: 22px;
+        font-weight: $font-weight-bold;
+        color: var(--text-primary);
+        line-height: 1.2;
+    }
+
+    &__pie-center-name {
+        font-size: 12px;
+        color: var(--text-muted);
+        text-align: center;
+        max-width: 90px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__pie-table {
+        flex: 1;
+        align-self: flex-start;
+        border-collapse: collapse;
+        font-size: $font-size-sm;
+
+        th {
+            padding: $spacing-xs $spacing-base;
+            color: var(--text-muted);
+            font-weight: $font-weight-medium;
+            font-size: $font-size-xs;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border-bottom: 1px solid var(--border-color);
+        }
+    }
+
+    &__pie-table-row {
+        cursor: pointer;
+        transition: background 0.15s ease;
+
+        td {
+            padding: $spacing-sm $spacing-base;
+            border-bottom: 1px solid var(--border-light);
+            color: var(--text-primary);
+        }
+
+        &:hover,
+        &--active {
+            td { background: var(--bg-primary); }
+        }
+    }
+
+    &__pie-table-col--category {
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+        font-weight: $font-weight-medium;
+    }
+
+    &__pie-table-col--amount {
+        text-align: right;
+        font-weight: $font-weight-semibold;
+        color: var(--text-secondary);
+        white-space: nowrap;
+    }
+
+    &__pie-table-col--pct {
+        text-align: right;
+        font-weight: $font-weight-semibold;
+        color: $color-accent;
+        width: 60px;
+    }
+
+    &__pie-table-dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: $radius-full;
+        flex-shrink: 0;
+    }
+    
+    &__pie-table-row--total {
+        td {
+            padding-top: $spacing-md;
+            border-top: 1px solid var(--border-color);
+            border-bottom: none;
+        }
     }
 
     // Actions
@@ -646,12 +769,16 @@
             flex-wrap: wrap;
         }
 
-        &__category-grid {
+        &__actions {
             grid-template-columns: 1fr;
         }
 
-        &__actions {
-            grid-template-columns: 1fr;
+        &__pie-wrapper {
+            flex-direction: column;
+        }
+
+        &__pie-chart-area {
+            width: 100%;
         }
     }
 }

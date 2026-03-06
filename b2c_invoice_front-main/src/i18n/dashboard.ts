@@ -30,6 +30,11 @@ export const dashboardTranslations: Translations = {
         // Charts
         totalSpending: 'Toplam Harcama',
         spendingByCategory: 'Kategoriye Göre Harcama',
+        loadingData: 'Yükleniyor...',
+        noCategoryData: 'Bu dönem için kategori verisi yok',
+        pieAmountCol: 'Tutar',
+        pieShareCol: 'Pay',
+        pieTotal: 'Toplam',
 
         // Quick actions
         quickActions: 'Hızlı İşlemler',
@@ -75,6 +80,11 @@ export const dashboardTranslations: Translations = {
         // Charts
         totalSpending: 'Total Spending',
         spendingByCategory: 'Spending by Category',
+        loadingData: 'Loading...',
+        noCategoryData: 'No category data for this period',
+        pieAmountCol: 'Amount',
+        pieShareCol: 'Share',
+        pieTotal: 'Total',
 
         // Quick actions
         quickActions: 'Quick Actions',
@@ -120,6 +130,11 @@ export const dashboardTranslations: Translations = {
         // Charts
         totalSpending: 'Gesamtausgaben',
         spendingByCategory: 'Ausgaben nach Kategorie',
+        loadingData: 'Wird geladen...',
+        noCategoryData: 'Keine Kategoriedaten für diesen Zeitraum',
+        pieAmountCol: 'Betrag',
+        pieShareCol: 'Anteil',
+        pieTotal: 'Gesamt',
 
         // Quick actions
         quickActions: 'Schnellzugriff',

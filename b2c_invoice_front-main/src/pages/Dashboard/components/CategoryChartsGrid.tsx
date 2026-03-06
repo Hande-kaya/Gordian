@@ -1,5 +1,5 @@
 /**
- * CategoryChartsGrid - Summary table + mini-charts, all in display currency.
+ * CategoryChartsGrid - Spending by category as a donut pie chart.
  */
 
 import React, { useMemo } from 'react';
@@ -7,7 +7,9 @@ import { CategorySpending } from '../../../services/statsApi';
 import { convertCurrency } from '../../../utils/currency';
 import { useCategories } from '../../../context/CategoryContext';
 import { useLang } from '../../../shared/i18n';
-import CategoryChart from './CategoryChart';
+import CategoryPieChart, { PieSlice } from './CategoryPieChart';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface CategoryChartsGridProps {
     categories: CategorySpending[];
@@ -17,39 +19,49 @@ interface CategoryChartsGridProps {
 
 interface GroupedCategory {
     name: string;
-    series: CategorySpending[];
     convertedTotal: number;
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const groupCategories = (categories: CategorySpending[], displayCurrency: string): GroupedCategory[] => {
+    const map = new Map<string, number>();
+    for (const cs of categories) {
+        const converted = convertCurrency(cs.category_total, cs.currency, displayCurrency) ?? cs.category_total;
+        map.set(cs.category, (map.get(cs.category) ?? 0) + converted);
+    }
+    return Array.from(map.entries())
+        .map(([name, convertedTotal]) => ({ name, convertedTotal }))
+        .sort((a, b) => b.convertedTotal - a.convertedTotal);
+};
+
+const formatCategoryKey = (key: string): string =>
+    key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+const toPieSlices = (grouped: GroupedCategory[], getLabel: (k: string) => string): PieSlice[] => {
+    const total = grouped.reduce((sum, g) => sum + g.convertedTotal, 0);
+    if (total === 0) return [];
+    return grouped.map((g) => ({
+        name: formatCategoryKey(getLabel(g.name)),
+        value: g.convertedTotal,
+        percentage: (g.convertedTotal / total) * 100,
+    }));
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const CategoryChartsGrid: React.FC<CategoryChartsGridProps> = ({ categories, loading, displayCurrency }) => {
     const { getLabelByKey } = useCategories();
     const { t } = useLang();
 
-    const grouped = useMemo((): GroupedCategory[] => {
-        const map = new Map<string, CategorySpending[]>();
-        for (const cs of categories) {
-            const existing = map.get(cs.category) || [];
-            existing.push(cs);
-            map.set(cs.category, existing);
-        }
-
-        const result: GroupedCategory[] = [];
-        map.forEach((series, name) => {
-            const total = series.reduce((sum, s) => {
-                const converted = convertCurrency(s.category_total, s.currency, displayCurrency) ?? s.category_total;
-                return sum + converted;
-            }, 0);
-            result.push({ name, series, convertedTotal: total });
-        });
-
-        return result.sort((a, b) => b.convertedTotal - a.convertedTotal);
-    }, [categories, displayCurrency]);
+    const grouped = useMemo(() => groupCategories(categories, displayCurrency), [categories, displayCurrency]);
+    const pieSlices = useMemo(() => toPieSlices(grouped, getLabelByKey), [grouped, getLabelByKey]);
 
     if (loading) {
         return (
             <div className="dashboard__section">
                 <h3 className="dashboard__section-title">{t('spendingByCategory')}</h3>
-                <div className="dashboard__chart-placeholder">Loading...</div>
+                <div className="dashboard__chart-placeholder">{t('loadingData')}</div>
             </div>
         );
     }
@@ -58,7 +70,7 @@ const CategoryChartsGrid: React.FC<CategoryChartsGridProps> = ({ categories, loa
         return (
             <div className="dashboard__section">
                 <h3 className="dashboard__section-title">{t('spendingByCategory')}</h3>
-                <div className="dashboard__chart-placeholder">No category data for this period</div>
+                <div className="dashboard__chart-placeholder">{t('noCategoryData')}</div>
             </div>
         );
     }
@@ -66,36 +78,8 @@ const CategoryChartsGrid: React.FC<CategoryChartsGridProps> = ({ categories, loa
     return (
         <div className="dashboard__section">
             <h3 className="dashboard__section-title">{t('spendingByCategory')}</h3>
-
-            <table className="dashboard__category-table">
-                <thead>
-                    <tr>
-                        <th>{t('catColLabel')}</th>
-                        <th>{t('colTotalAmount')} ({displayCurrency})</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {grouped.map((g) => (
-                        <tr key={g.name}>
-                            <td>{getLabelByKey(g.name)}</td>
-                            <td className="dashboard__table-try">
-                                {g.convertedTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-
-            <div className="dashboard__category-grid">
-                {grouped.map((g) => (
-                    <CategoryChart
-                        key={g.name}
-                        categoryName={g.name}
-                        series={g.series}
-                        displayCurrency={displayCurrency}
-                        convertedTotal={g.convertedTotal}
-                    />
-                ))}
+            <div className="dashboard__chart-container">
+                <CategoryPieChart data={pieSlices} displayCurrency={displayCurrency} />
             </div>
         </div>
     );
