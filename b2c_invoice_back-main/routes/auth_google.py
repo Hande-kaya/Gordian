@@ -19,7 +19,7 @@ from flask_restx import Namespace, Resource
 from config import config
 from utils.rate_limit import rate_limit
 from routes.sso_helpers import (
-    generate_state, validate_state, build_b2c_redirect,
+    validate_origin, generate_state, validate_state, build_b2c_redirect,
     handle_sso_callback, complete_registration,
 )
 
@@ -43,7 +43,8 @@ class GoogleLogin(Resource):
         if not _is_configured():
             return {'success': False, 'message': 'Google SSO is not configured'}, 503
 
-        state = generate_state()
+        frontend_origin = validate_origin(request.args.get('origin'))
+        state = generate_state(frontend_origin=frontend_origin)
         params = {
             'client_id': config.GOOGLE_CLIENT_ID,
             'redirect_uri': config.GOOGLE_REDIRECT_URI,
@@ -67,15 +68,16 @@ class GoogleCallback(Resource):
         if error:
             return redirect(build_b2c_redirect(success='false', error=error))
 
-        if not validate_state(request.args.get('state')):
+        is_valid, frontend_origin = validate_state(request.args.get('state'))
+        if not is_valid:
             return redirect(build_b2c_redirect(success='false', error='invalid_state'))
 
         code = request.args.get('code')
         if not code:
-            return redirect(build_b2c_redirect(success='false', error='missing_code'))
+            return redirect(build_b2c_redirect(base_url=frontend_origin, success='false', error='missing_code'))
 
         if not _is_configured():
-            return redirect(build_b2c_redirect(success='false', error='sso_not_configured'))
+            return redirect(build_b2c_redirect(base_url=frontend_origin, success='false', error='sso_not_configured'))
 
         # Exchange code for tokens
         try:
@@ -88,15 +90,15 @@ class GoogleCallback(Resource):
             }, timeout=10)
             token_data = token_resp.json()
         except Exception as exc:
-            return redirect(build_b2c_redirect(success='false', error=str(exc)))
+            return redirect(build_b2c_redirect(base_url=frontend_origin, success='false', error=str(exc)))
 
         if 'error' in token_data:
             err = token_data.get('error_description', token_data['error'])
-            return redirect(build_b2c_redirect(success='false', error=err))
+            return redirect(build_b2c_redirect(base_url=frontend_origin, success='false', error=err))
 
         access_token = token_data.get('access_token')
         if not access_token:
-            return redirect(build_b2c_redirect(success='false', error='no_access_token'))
+            return redirect(build_b2c_redirect(base_url=frontend_origin, success='false', error='no_access_token'))
 
         # Get user info
         try:
@@ -107,15 +109,15 @@ class GoogleCallback(Resource):
             )
             user_info = user_resp.json()
         except Exception as exc:
-            return redirect(build_b2c_redirect(success='false', error=str(exc)))
+            return redirect(build_b2c_redirect(base_url=frontend_origin, success='false', error=str(exc)))
 
         email = (user_info.get('email') or '').lower()
         if not email:
-            return redirect(build_b2c_redirect(success='false', error='email_not_found'))
+            return redirect(build_b2c_redirect(base_url=frontend_origin, success='false', error='email_not_found'))
 
         display_name = user_info.get('name', '')
         picture_url = user_info.get('picture', '')
-        return handle_sso_callback(email, display_name, 'google', picture_url=picture_url)
+        return handle_sso_callback(email, display_name, 'google', picture_url=picture_url, frontend_origin=frontend_origin)
 
 
 @auth_google_ns.route('/complete-registration')

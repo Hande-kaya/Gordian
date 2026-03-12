@@ -22,10 +22,82 @@ from services.reconciliation_helpers import (
     doc_to_input as _doc_to_input,
     build_match_doc as _build_match_doc,
 )
+from services.bank_statement_utils import (
+    has_meaningful_description as _has_desc,
+)
 
 logger = logging.getLogger(__name__)
 
 _repo = ReconciliationRepository()
+
+
+def _tx_matches_search(tx: Dict[str, Any], query: str) -> bool:
+    """Check if a transaction matches a search query (case-insensitive)."""
+    q = query.lower()
+    if q in (tx.get('description') or '').lower():
+        return True
+    if q in (tx.get('bank_name') or '').lower():
+        return True
+    if q in (tx.get('date') or ''):
+        return True
+    if q in str(tx.get('amount', '')):
+        return True
+    for m in tx.get('matches') or []:
+        dr = m.get('document_ref') or {}
+        if q in (dr.get('filename') or '').lower():
+            return True
+        if q in (dr.get('vendor_name') or '').lower():
+            return True
+    return False
+
+
+def _apply_column_filters(enriched: list, filters: Dict[str, Any]) -> list:
+    """Apply text-based column filters — substring match per field."""
+    if not filters:
+        return enriched
+
+    # Map filter keys to field extractors (all produce lowercase strings)
+    def _get_field(tx, key):
+        if key == 'date':
+            return str(tx.get('date') or '')
+        if key == 'description':
+            return str(tx.get('description') or '')
+        if key == 'type':
+            return str(tx.get('type') or '')
+        if key == 'amount':
+            return str(tx.get('amount', ''))
+        if key == 'match_doc':
+            # Search in matched document filenames
+            matches = tx.get('matches') or []
+            return ' '.join(
+                str(m.get('document_ref', {}).get('filename', ''))
+                for m in matches
+            )
+        if key == 'confidence':
+            matches = tx.get('matches') or []
+            parts = []
+            for m in matches:
+                score = m.get('score', {})
+                parts.append(str(score.get('total_score', '')))
+                parts.append(str(score.get('final_score', '')))
+            return ' '.join(parts)
+        if key == 'bank_name':
+            return str(tx.get('bank_name') or '')
+        if key == 'currency':
+            return str(tx.get('currency') or '')
+        # Fallback: try direct field access
+        return str(tx.get(key) or '')
+
+    result = enriched
+    for key, query in filters.items():
+        q = str(query).lower().strip()
+        if not q:
+            continue
+        result = [
+            e for e in result
+            if q in _get_field(e, key).lower()
+        ]
+    return result
 
 
 class ReconciliationService:
@@ -104,6 +176,11 @@ class ReconciliationService:
         preserve_match_ids: Optional[List[str]],
     ) -> Dict[str, Any]:
         """Core matching logic (called under lock)."""
+        # 0. Clean up stale matches (referencing deleted docs/statements)
+        stale_deleted = self._cleanup_stale_matches(company_id, company_oid)
+        if stale_deleted:
+            logger.info(f"Cleaned up {stale_deleted} stale matches (deleted docs/statements)")
+
         # 1. Handle existing matches based on rematch_mode
         locked_keys: set = set()
         locked_doc_ids: set = set()
@@ -240,6 +317,8 @@ class ReconciliationService:
         page: int = 1,
         page_size: int = 50,
         filter_status: str = 'all',
+        search: str = '',
+        filters: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Unified transaction list with match info.
@@ -277,26 +356,35 @@ class ReconciliationService:
                 'description': tx.get('description'),
                 'amount': float(tx.get('amount', 0)),
                 'type': tx.get('type', 'debit'),
-                'bank_name': tx.get('bank_name', ''),
+                'bank_name': ref.get('bank_name') or tx.get('bank_name') or '',
                 'currency': ref.get('currency') or None,
                 'page': tx.get('page'), 'y_min': tx.get('y_min'), 'y_max': tx.get('y_max'),
                 'matches': matches,
                 'match': matches[0] if matches else None,
             })
 
-        # 4. Filter
+        # 4. Summary counts (before any filtering)
         matched_count = sum(1 for e in enriched if e['matches'])
         unmatched_count = len(enriched) - matched_count
 
+        # 5. Status filter
         if filter_status == 'matched':
             enriched = [e for e in enriched if e['matches']]
         elif filter_status == 'unmatched':
             enriched = [e for e in enriched if not e['matches']]
 
+        # 6. Search filter (after status filter, before pagination)
+        if search:
+            enriched = [e for e in enriched if _tx_matches_search(e, search)]
+
+        # 6b. Column filters
+        if filters:
+            enriched = _apply_column_filters(enriched, filters)
+
         total = len(enriched)
 
-        # 5. Paginate
-        page_size = min(max(1, page_size), 100)
+        # 7. Paginate (allow up to 10000 for dashboard aggregation)
+        page_size = min(max(1, page_size), 10000)
         start = (page - 1) * page_size
         page_items = enriched[start:start + page_size]
 
@@ -416,6 +504,72 @@ class ReconciliationService:
 
     # ---- Private helpers ----
 
+    def _cleanup_stale_matches(
+        self, company_id: str, company_oid: ObjectId,
+    ) -> int:
+        """Delete matches referencing deleted/missing documents or statements.
+
+        When a document or bank statement is deleted, cascade should remove
+        its matches. But if cascade failed or was incomplete, stale matches
+        linger and block re-matching. This sweep catches them.
+        """
+        collection = get_collection('documents')
+        matches = _repo.get_all_matches_for_company(company_id)
+        if not matches:
+            return 0
+
+        # Collect all referenced doc IDs and statement IDs
+        ref_ids: set = set()
+        for m in matches:
+            dr = m.get('document_ref', {})
+            doc_id = dr.get('document_id')
+            if doc_id:
+                ref_ids.add(doc_id)
+            tr = m.get('transaction_ref', {})
+            stmt_id = tr.get('statement_id')
+            if stmt_id:
+                ref_ids.add(stmt_id)
+
+        if not ref_ids:
+            return 0
+
+        # Query which of these IDs still exist and are NOT deleted
+        try:
+            oids = [ObjectId(rid) for rid in ref_ids]
+        except Exception:
+            return 0
+
+        alive = set()
+        for doc in collection.find(
+            {
+                '_id': {'$in': oids},
+                'company_id': company_oid,
+                'deleted_at': {'$exists': False},
+            },
+            {'_id': 1},
+        ):
+            alive.add(str(doc['_id']))
+
+        # Delete matches where doc or statement is gone
+        stale_count = 0
+        match_coll = get_collection(_repo.COLLECTION)
+        stale_ids = []
+        for m in matches:
+            doc_id = (m.get('document_ref') or {}).get('document_id')
+            stmt_id = (m.get('transaction_ref') or {}).get('statement_id')
+            if (doc_id and doc_id not in alive) or (stmt_id and stmt_id not in alive):
+                stale_ids.append(m['_id'])
+
+        if stale_ids:
+            try:
+                oid_list = [ObjectId(sid) for sid in stale_ids]
+                result = match_coll.delete_many({'_id': {'$in': oid_list}})
+                stale_count = result.deleted_count
+            except Exception as e:
+                logger.warning(f"Stale match cleanup failed: {e}")
+
+        return stale_count
+
     @staticmethod
     def _lock_remaining_matches(
         matches: List[Dict], locked_keys: set, locked_doc_ids: set,
@@ -440,6 +594,7 @@ class ReconciliationService:
             'type': 'bank-statement',
             'ocr_status': 'completed',
             'deleted_at': {'$exists': False},
+            'status': {'$ne': 'deleted'},
         }
         if statement_ids:
             try:
@@ -459,8 +614,32 @@ class ReconciliationService:
             ed = stmt.get('extracted_data') or {}
             txs = ed.get('transactions') or []
             currency = ed.get('currency') or None
+            stmt_bank_name = ed.get('bank_name') or stmt.get('filename') or stmt.get('file_name') or ''
+
+            # Collect known balance amounts from statement header
+            _balance_amounts: set = set()
+            for _bf in ('opening_balance', 'closing_balance'):
+                _bv = ed.get(_bf)
+                if _bv is not None:
+                    try:
+                        _balance_amounts.add(round(abs(float(_bv)), 2))
+                    except (ValueError, TypeError):
+                        pass
 
             for idx, tx in enumerate(txs):
+                desc = tx.get('description') or ''
+
+                # Structural guard: no real description AND amount matches a
+                # known balance → almost certainly a balance line, skip it.
+                # If desc has real text (even "BALANCE-xxx"), it passes through.
+                if not _has_desc(desc) and _balance_amounts:
+                    try:
+                        tx_amt = round(abs(float(tx.get('amount', 0))), 2)
+                        if tx_amt in _balance_amounts:
+                            continue
+                    except (ValueError, TypeError):
+                        pass
+
                 # Carry normalized_amount for cross-currency matching
                 if 'normalized_amount' not in tx and currency:
                     tx['_stmt_currency'] = currency
@@ -469,6 +648,7 @@ class ReconciliationService:
                     'statement_id': stmt_id,
                     'tx_index': idx,
                     'currency': currency,
+                    'bank_name': stmt_bank_name,
                 })
 
         return transactions, tx_refs
@@ -477,12 +657,18 @@ class ReconciliationService:
         self, company_oid: ObjectId, doc_type: str,
         doc_ids: Optional[List[str]] = None,
     ) -> List[Dict]:
-        """Fetch expense or income documents with projection."""
+        """Fetch expense or income documents with projection.
+
+        Excludes deleted documents via BOTH mechanisms:
+        - deleted_at field (document_service soft-delete)
+        - status='deleted' (invoice_service soft-delete)
+        """
         collection = get_collection('documents')
         query: Dict[str, Any] = {
             'company_id': company_oid,
             'type': doc_type,
             'deleted_at': {'$exists': False},
+            'status': {'$ne': 'deleted'},
         }
         if doc_ids:
             try:

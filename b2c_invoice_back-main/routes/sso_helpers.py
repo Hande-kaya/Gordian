@@ -27,35 +27,53 @@ def _get_states_collection():
     return get_collection('oauth_states')
 
 
-def generate_state() -> str:
+def validate_origin(origin: Optional[str]) -> Optional[str]:
+    """Return the origin only if it's in the allowlist, else None."""
+    if not origin:
+        return None
+    normalized = origin.strip().rstrip('/')
+    if normalized in config.ALLOWED_REDIRECT_ORIGINS:
+        return normalized
+    return None
+
+
+def generate_state(frontend_origin: Optional[str] = None) -> str:
     """Generate and store OAuth state in MongoDB (multi-worker safe)."""
     state = secrets.token_urlsafe(32)
     col = _get_states_collection()
-    col.insert_one({
+    doc = {
         'state': state,
         'expires_at': datetime.utcnow() + timedelta(seconds=_STATE_TTL),
-    })
+    }
+    if frontend_origin:
+        doc['frontend_origin'] = frontend_origin
+    col.insert_one(doc)
     # Cleanup expired states (non-blocking, best-effort)
     col.delete_many({'expires_at': {'$lt': datetime.utcnow()}})
     return state
 
 
-def validate_state(state: Optional[str]) -> bool:
-    """Validate and consume OAuth state from MongoDB (one-time use)."""
+def validate_state(state: Optional[str]) -> tuple:
+    """Validate and consume OAuth state from MongoDB (one-time use).
+
+    Returns (is_valid, stored_origin) tuple.
+    """
     if not state:
-        return False
+        return False, None
     col = _get_states_collection()
     doc = col.find_one_and_delete({
         'state': state,
         'expires_at': {'$gte': datetime.utcnow()},
     })
-    return doc is not None
+    if doc is None:
+        return False, None
+    return True, doc.get('frontend_origin')
 
 
-def build_b2c_redirect(**params) -> str:
+def build_b2c_redirect(base_url: Optional[str] = None, **params) -> str:
     """Build redirect URL to B2C frontend SSO callback page."""
     from urllib.parse import urlencode
-    base = config.B2C_FRONTEND_URL.rstrip('/')
+    base = (base_url or config.B2C_FRONTEND_URL).rstrip('/')
     query = urlencode(params)
     return f"{base}/auth/sso-callback?{query}"
 
@@ -87,7 +105,7 @@ def decode_completion_token(token_str: str, provider: str) -> Optional[dict]:
         return None
 
 
-def handle_sso_callback(email: str, display_name: str, provider: str, picture_url: str = ''):
+def handle_sso_callback(email: str, display_name: str, provider: str, picture_url: str = '', frontend_origin: Optional[str] = None):
     """
     Common SSO callback logic after email is extracted from provider.
 
@@ -97,15 +115,15 @@ def handle_sso_callback(email: str, display_name: str, provider: str, picture_ur
     user = users.find_one({'email': email})
 
     if user:
-        return _handle_existing_user(user, users, provider, picture_url=picture_url)
+        return _handle_existing_user(user, users, provider, picture_url=picture_url, frontend_origin=frontend_origin)
     else:
-        return _handle_new_user(email, display_name, provider, picture_url=picture_url)
+        return _handle_new_user(email, display_name, provider, picture_url=picture_url, frontend_origin=frontend_origin)
 
 
-def _handle_existing_user(user, users, provider: str, picture_url: str = ''):
+def _handle_existing_user(user, users, provider: str, picture_url: str = '', frontend_origin: Optional[str] = None):
     """Existing user: auto-login or reject."""
     if user.get('account_type') != 'b2c':
-        return redirect(build_b2c_redirect(success='false', error='b2b_account'))
+        return redirect(build_b2c_redirect(base_url=frontend_origin, success='false', error='b2b_account'))
 
     update_fields = {
         f'{provider}_sso_enabled': True,
@@ -129,15 +147,16 @@ def _handle_existing_user(user, users, provider: str, picture_url: str = ''):
     access_token = create_access_token(token_data)
 
     # Cookie + token in URL (cross-domain: cookie may be blocked by browser)
-    resp = redirect(build_b2c_redirect(success='true', token=access_token))
+    resp = redirect(build_b2c_redirect(base_url=frontend_origin, success='true', token=access_token))
     set_auth_cookie(resp, access_token)
     return resp
 
 
-def _handle_new_user(email: str, display_name: str, provider: str, picture_url: str = ''):
+def _handle_new_user(email: str, display_name: str, provider: str, picture_url: str = '', frontend_origin: Optional[str] = None):
     """New user: redirect to completion form."""
     token = create_completion_token(email, display_name, provider, picture_url=picture_url)
     return redirect(build_b2c_redirect(
+        base_url=frontend_origin,
         needs_completion='true',
         completion_token=token,
         suggested_name=display_name,

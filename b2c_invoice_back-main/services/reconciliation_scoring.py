@@ -1,9 +1,10 @@
 """
-Reconciliation Scoring Engine — pure scoring functions, no DB access.
+Reconciliation Scoring Engine — Gate + Score model, no DB access.
 
-Optimized for bank-statement ↔ invoice/receipt matching.
-Amount is king (strongest signal), date confirms, description helps.
-Dynamic weight normalization when data is missing.
+Architecture:
+- Gate 1 (Date): hard reject if >60 days apart
+- Gate 2 (Amount): currency-aware hard reject (same-currency >0.5%, cross >5%)
+- Score: base 0.85 + amount precision bonus + date proximity bonus + vendor match bonus
 """
 
 import re
@@ -12,18 +13,18 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Union
 
 # --- Config ---
-# Amount is king: exact amount match is the strongest signal in bank reconciliation.
-# Date is secondary confirmation. Description is nice-to-have but noisy.
 
-DEFAULT_WEIGHTS = {
-    'amount': 0.60,
-    'date': 0.22,
-    'description': 0.18,
-}
-
-MATCH_MIN = 0.90
+MATCH_MIN = 0.85
 HIGH_CONFIDENCE = 0.75
 MEDIUM_CONFIDENCE = 0.50
+
+# Gate thresholds
+_DATE_GATE_DAYS = 60
+_SAME_CURRENCY_TOL = 0.005   # 0.5%
+_CROSS_CURRENCY_TOL = 0.05   # 5%
+
+# Base score for candidates passing all gates
+_BASE_SCORE = 0.85
 
 # --- Multi-language character normalization (TR + DE + FR + common EU) ---
 
@@ -195,21 +196,29 @@ def _score_single_amount(tx_amount: float, doc_amount: float) -> float:
 def score_amount(
     tx_amount: float,
     doc_amounts: Union[float, List[float]],
-) -> float:
+) -> Tuple[float, Optional[float]]:
     """
     Try all candidate doc amounts, return best match.
 
     doc_amounts can be a single float or a list (e.g. [total, net]).
     Bank may pay total (KDV dahil) or net (KDV hariç).
+
+    Returns (score, matched_doc_amount) — the specific doc amount that
+    produced the best score, so downstream can record which amount matched.
     """
     if isinstance(doc_amounts, (int, float)):
-        return _score_single_amount(tx_amount, float(doc_amounts))
+        da = float(doc_amounts)
+        return _score_single_amount(tx_amount, da), (da if da > 0 else None)
 
     best = 0.0
+    best_amount: Optional[float] = None
     for da in doc_amounts:
         if da and da > 0:
-            best = max(best, _score_single_amount(tx_amount, float(da)))
-    return best
+            s = _score_single_amount(tx_amount, float(da))
+            if s > best:
+                best = s
+                best_amount = float(da)
+    return best, best_amount
 
 
 def parse_date(raw: Optional[str]) -> Optional[datetime]:
@@ -332,10 +341,53 @@ def score_description(
             lev = levenshtein_similarity(norm_tx, norm_t)
             best = max(best, lev)
 
-    return best if best > 0 else -1.0
+    # Weak Levenshtein noise (< 0.35) should NOT penalise the overall score.
+    # Returning -1 excludes description from the weighted sum so a perfect
+    # amount+date pair isn't dragged below the match threshold by random
+    # string similarity between unrelated vendor names and bank descriptions.
+    if best < 0.35:
+        return -1.0
+    return best
 
 
-# --- Main pair scorer ---
+# --- Gate + Score helpers ---
+
+def _date_diff_days(tx_date: Optional[str], doc_date: Optional[str]) -> Optional[int]:
+    """Return absolute day difference, or None if either date is missing."""
+    d1 = parse_date(tx_date)
+    d2 = parse_date(doc_date)
+    if d1 is None or d2 is None:
+        return None
+    return abs((d1 - d2).days)
+
+
+
+def _score_vendor_match(
+    tx_desc: Optional[str],
+    tx_vendor: Optional[str],
+    doc_vendor: Optional[str],
+    doc_filename: Optional[str],
+) -> float:
+    """Compare TX vendor/desc against doc vendor. Returns 0.0-1.0."""
+    # 1. Direct vendor-to-vendor (strongest signal)
+    if tx_vendor and doc_vendor:
+        tv = normalize_text(tx_vendor)
+        dv = normalize_text(doc_vendor)
+        if tv and dv:
+            if tv == dv:
+                return 1.0
+            if tv in dv or dv in tv:
+                return 0.85
+            common = set(tv.split()) & set(dv.split())
+            if common:
+                return 0.70
+
+    # 2. Fall back to existing description matching
+    raw_score = score_description(tx_desc, doc_vendor, doc_filename)
+    return max(0.0, raw_score)  # clamp -1 → 0
+
+
+# --- Main pair scorer (Gate + Score) ---
 
 def calculate_pair_score(
     tx_amount: float,
@@ -345,60 +397,103 @@ def calculate_pair_score(
     doc_date: Optional[str],
     doc_vendor: Optional[str],
     doc_filename: Optional[str],
-    weights: Optional[Dict[str, float]] = None,
+    tx_vendor: Optional[str] = None,
+    same_currency: bool = False,
+    weights: Optional[Dict[str, float]] = None,  # backward compat, ignored
 ) -> Dict:
     """
-    Score a single (transaction, document) pair.
+    Gate + Score model for (transaction, document) pair.
 
-    doc_amounts: single float or list [total_amount, net_amount].
-    Returns dict with total_score, data_quality, breakdown.
-    Dynamic weight normalization: missing dimensions redistribute weight.
+    Gates (hard reject → 0.0):
+    - Date: >60 days apart
+    - Amount: same-currency >0.5%, cross-currency >5%
+
+    Score (0.85 base + bonuses):
+    - Amount precision bonus (0-0.05)
+    - Date proximity bonus (0-0.05)
+    - Vendor/description bonus (0-0.15)
     """
-    w = weights or DEFAULT_WEIGHTS
-
-    amt_score = score_amount(tx_amount, doc_amounts)
-    dt_score = score_date(tx_date, doc_date)
-    desc_score = score_description(tx_desc, doc_vendor, doc_filename)
-
-    # Dynamic weights — only include available dimensions
-    active: list[Tuple[str, float, float]] = []
-    active.append(('amount', w['amount'], amt_score))
-
-    if dt_score >= 0:
-        active.append(('date', w['date'], dt_score))
-    if desc_score >= 0:
-        active.append(('description', w['description'], desc_score))
-
-    total_weight = sum(a[1] for a in active)
-    if total_weight <= 0:
+    # --- GATE 1: Date (hard reject if >60 days) ---
+    dt_days = _date_diff_days(tx_date, doc_date)
+    if dt_days is not None and dt_days > _DATE_GATE_DAYS:
         return {
             'total_score': 0.0,
             'data_quality': 0.0,
-            'breakdown': {'amount': amt_score, 'date': dt_score, 'description': desc_score},
+            'breakdown': {'amount_pct': None, 'date_days': dt_days, 'desc': 0.0},
+            'reject_reason': 'date_too_far',
         }
 
-    weighted_sum = sum((a[1] / total_weight) * a[2] for a in active)
+    # --- GATE 2: Amount (currency-aware hard reject) ---
+    amt_score, matched_doc_amount = score_amount(tx_amount, doc_amounts)
 
-    # Data quality: proportion of available dimensions
-    data_quality = len(active) / 3.0
+    # If no valid doc amount found, hard reject — can't match without amount
+    if matched_doc_amount is None or matched_doc_amount <= 0:
+        return {
+            'total_score': 0.0,
+            'data_quality': 0.0,
+            'breakdown': {'amount_pct': None, 'date_days': dt_days, 'desc': 0.0},
+            'reject_reason': 'no_doc_amount',
+        }
 
-    # Exact amount match bonus:
-    # Kuruş kuruş eşleşme en güçlü sinyal — diğer boyutlar eksik olsa
-    # bile data_quality cezasını azalt.
-    if amt_score >= 0.95:
-        # Amount perfect → softer penalty for missing data
-        quality_factor = 0.90 + 0.10 * data_quality
-    else:
-        quality_factor = 0.80 + 0.20 * data_quality
+    # If tx_amount is invalid, hard reject
+    if tx_amount <= 0:
+        return {
+            'total_score': 0.0,
+            'data_quality': 0.0,
+            'breakdown': {'amount_pct': None, 'date_days': dt_days, 'desc': 0.0},
+            'reject_reason': 'no_tx_amount',
+        }
 
-    final_score = weighted_sum * quality_factor
+    pct = abs(tx_amount - matched_doc_amount) / max(tx_amount, matched_doc_amount)
+    max_tolerance = _SAME_CURRENCY_TOL if same_currency else _CROSS_CURRENCY_TOL
 
-    return {
-        'total_score': round(min(1.0, final_score), 4),
+    if pct > max_tolerance:
+        return {
+            'total_score': 0.0,
+            'data_quality': 0.0,
+            'breakdown': {'amount_pct': round(pct, 6), 'date_days': dt_days, 'desc': 0.0},
+            'reject_reason': 'amount_mismatch',
+            'matched_doc_amount': matched_doc_amount,
+        }
+
+    # --- GATES PASSED → Confidence Score ---
+    score = _BASE_SCORE
+
+    # Amount precision bonus (0-0.05): more exact = better
+    if max_tolerance > 0:
+        score += 0.05 * max(0.0, 1.0 - pct / max_tolerance)
+
+    # Date proximity bonus (0-0.05)
+    if dt_days is not None:
+        if dt_days <= 7:
+            score += 0.05
+        elif dt_days <= 14:
+            score += 0.04
+        elif dt_days <= 30:
+            score += 0.02
+        # 31-60 days: no bonus (but passes gate)
+
+    # Vendor/description bonus (0-0.15)
+    desc_match = _score_vendor_match(tx_desc, tx_vendor, doc_vendor, doc_filename)
+    score += desc_match * 0.15
+
+    # Data quality indicator
+    dims = 1  # amount always present
+    if dt_days is not None:
+        dims += 1
+    if desc_match > 0:
+        dims += 1
+    data_quality = dims / 3.0
+
+    result = {
+        'total_score': round(min(1.0, score), 4),
         'data_quality': round(data_quality, 2),
         'breakdown': {
-            'amount': round(amt_score, 4),
-            'date': round(dt_score, 4),
-            'description': round(desc_score, 4),
+            'amount_pct': round(pct, 6),
+            'date_days': dt_days,
+            'desc': round(desc_match, 4),
         },
     }
+    if matched_doc_amount is not None:
+        result['matched_doc_amount'] = matched_doc_amount
+    return result

@@ -16,7 +16,7 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
-from services.bank_statement_utils import normalize_currency as _normalize_currency
+from services.bank_statement_utils import normalize_currency as _normalize_currency, safe_float
 
 
 @dataclass
@@ -49,7 +49,8 @@ class LlmExtractionService:
         ocr_text: str,
         ocr_index: Dict[str, List[Dict]],
         page_count: int,
-        doc_type: str = 'invoice'
+        doc_type: str = 'invoice',
+        company_id: str = None
     ) -> Dict[str, Any]:
         """
         Main entry: detect multi-doc, extract entities per document.
@@ -69,6 +70,9 @@ class LlmExtractionService:
             extracted_data = self._bank_extractor.extract(
                 ocr_text, ocr_index, page_count
             )
+            # Add bounding boxes for bank statement highlights
+            from utils.bbox_matcher import add_bank_statement_bounding_boxes
+            add_bank_statement_bounding_boxes(extracted_data, ocr_text, ocr_index)
             return {
                 'extracted_data': extracted_data,
                 'multi_document': {
@@ -87,10 +91,10 @@ class LlmExtractionService:
         # Step 2: Extract entities
         if multi_doc and multi_doc.is_multi_document:
             extracted_documents = self._extract_by_boundaries(
-                ocr_index, multi_doc
+                ocr_index, multi_doc, company_id=company_id
             )
         else:
-            extracted_documents = [self._llm_extract_entities(ocr_text)]
+            extracted_documents = [self._llm_extract_entities(ocr_text, company_id=company_id)]
 
         # Step 2b: Add bounding boxes to all extracted documents
         from utils.bbox_matcher import add_bounding_boxes
@@ -170,7 +174,8 @@ class LlmExtractionService:
     def _extract_by_boundaries(
         self,
         ocr_index: Dict[str, List[Dict]],
-        multi_doc: MultiDocDetection
+        multi_doc: MultiDocDetection,
+        company_id: str = None
     ) -> List[Dict[str, Any]]:
         """Extract per-document using layout boundaries."""
         from services.layout.service import get_layout_analysis_service
@@ -183,7 +188,7 @@ class LlmExtractionService:
             full_text = '\n'.join(
                 b.get('text', '') for b in ocr_index.get('blocks', [])
             )
-            return [self._llm_extract_entities(full_text)]
+            return [self._llm_extract_entities(full_text, company_id=company_id)]
 
         boundary_texts = layout_service.extract_texts_for_boundaries(
             ocr_index, boundaries
@@ -203,14 +208,14 @@ class LlmExtractionService:
                     full_text = '\n'.join(
                         b.get('text', '') for b in ocr_index.get('blocks', [])
                     )
-                    return [self._llm_extract_entities(full_text)]
+                    return [self._llm_extract_entities(full_text, company_id=company_id)]
 
         extracted_docs = []
         for idx, text in enumerate(boundary_texts):
             if len(text.strip()) < 50:
                 continue
 
-            doc_data = self._llm_extract_entities(text)
+            doc_data = self._llm_extract_entities(text, company_id=company_id)
             doc_data['_split_index'] = idx
             if idx < len(boundaries):
                 b = boundaries[idx]
@@ -228,7 +233,7 @@ class LlmExtractionService:
             full_text = '\n'.join(
                 b.get('text', '') for b in ocr_index.get('blocks', [])
             )
-            return [self._llm_extract_entities(full_text)]
+            return [self._llm_extract_entities(full_text, company_id=company_id)]
 
         return extracted_docs
 
@@ -279,8 +284,11 @@ RESPOND WITH JSON ONLY:
 
         return None
 
-    def _llm_extract_entities(self, ocr_text: str) -> Dict[str, Any]:
+    def _llm_extract_entities(self, ocr_text: str, company_id: str = None) -> Dict[str, Any]:
         """Extract structured invoice fields via GPT-4o-mini."""
+        # Build dynamic category list from company settings (custom or default)
+        category_keys, category_block = self._build_category_prompt(company_id)
+
         prompt = f"""You are an invoice data extraction assistant. Extract all relevant information from this invoice OCR text.
 
 OCR TEXT:
@@ -291,9 +299,9 @@ Extract the following fields (return null if not found):
 RESPOND WITH JSON ONLY:
 {{
     "invoice_number": "string or null",
-    "invoice_date": "string or null",
+    "invoice_date": "YYYY-MM-DD format, string or null",
     "invoice_type": "string or null",
-    "due_date": "string or null",
+    "due_date": "YYYY-MM-DD format, string or null",
     "supplier_name": "company name (not website), string or null",
     "supplier_address": "full address, string or null",
     "supplier_tax_id": "string or null",
@@ -319,7 +327,7 @@ RESPOND WITH JSON ONLY:
             "amount": "total for this line"
         }}
     ],
-    "expense_category": "one of: food, fuel, accommodation, transport, toll, parking, office_supplies, communication, other"
+    "expense_category": "REQUIRED. Must be one of: {category_keys}"
 }}
 
 IMPORTANT:
@@ -328,16 +336,18 @@ IMPORTANT:
 - receiver_email is the CUSTOMER's email (under Musteri/Alici section)
 - Find ALL IBANs in the document (may have multiple bank accounts)
 - For Turkish invoices: KDV = VAT, Genel Toplam = Total, Ara Toplam = Subtotal
-- expense_category: Detect from vendor type, line items, and keywords.
-  food=restaurant/cafe/supermarket/mensa/kantine
-  fuel=gas station/petrol/benzin/bleifrei/diesel/tankstelle/enilive/eni/shell/bp
-  accommodation=hotel/hostel/pension/unterkunft
-  transport=train/bus/taxi/flight/sbb/bahn
-  toll=highway toll/bridge toll/peage/maut/vignette
-  parking=parking lot/garage/parkhaus
-  office_supplies=stationery/office equipment/burobedarf
-  communication=phone/internet/telefon
-  other=if none match"""
+- expense_category is REQUIRED, never return null. Pick the BEST matching category
+  from this list by analyzing the vendor name, line items, and invoice context:
+{category_block}
+  Return ONLY the key (e.g. "travel_meals"), never the label or description.
+  If nothing fits, use "miscellaneous".
+- AMOUNTS: Return all monetary amounts as PLAIN NUMBERS without thousand separators.
+  Different locales use different formats (e.g. "1.500,00" or "1,500.00" both mean
+  one thousand five hundred). Convert to plain number: 1500.00. Do NOT return
+  locale-formatted strings.
+- MULTI-CURRENCY INVOICES: If the invoice shows amounts in more than one currency,
+  use the PRIMARY invoice currency — the one used in line items and the main total.
+  Ignore secondary currency equivalents or conversion lines."""
 
         try:
             response = self.openai_client.chat.completions.create(
@@ -357,11 +367,83 @@ IMPORTANT:
                 if detected:
                     llm_result['currency'] = detected
                     logger.info(f"Currency fallback: {detected}")
-            return self._convert_to_standard_format(llm_result)
+
+            # Capture raw dates before conversion for date format detection
+            raw_dates = {}
+            for date_field in ('invoice_date', 'due_date'):
+                raw_val = llm_result.get(date_field)
+                if raw_val:
+                    raw_dates[date_field] = str(raw_val)
+
+            data = self._convert_to_standard_format(llm_result)
+
+            # Run date format detection and re-parse if needed
+            if raw_dates:
+                from services.date_format_service import (
+                    detect_date_format, parse_date_with_format,
+                )
+                date_entries = list(raw_dates.items())
+                currency = data.get('currency')
+                fmt_info = detect_date_format(date_entries, currency)
+                assumed = fmt_info['assumed']
+
+                # Re-parse dates with detected format
+                for field, raw_val in raw_dates.items():
+                    parsed = parse_date_with_format(raw_val, assumed)
+                    if parsed:
+                        data[field] = parsed
+
+                # Store format metadata
+                data['date_format'] = {
+                    'assumed': assumed,
+                    'source': fmt_info['source'],
+                    'original_dates': raw_dates,
+                }
+                logger.info(
+                    f"Date format detection: {fmt_info['assumed']} "
+                    f"(source: {fmt_info['source']})"
+                )
+
+            return data
 
         except Exception as e:
             logger.error(f"LLM extraction error: {e}")
             return self._empty_extracted_data()
+
+    @staticmethod
+    def _build_category_prompt(company_id: str = None):
+        """Build category key list and description block for the prompt.
+
+        Returns (keys_csv, description_block) tuple.
+        keys_csv: "cogs, payroll, ..., miscellaneous" — goes inside JSON schema
+        description_block: "  - cogs: Direct costs..." — goes in IMPORTANT section
+        """
+        try:
+            from services.category_service import get_categories
+            result = get_categories(company_id) if company_id else None
+        except Exception as e:
+            logger.warning(f"Category fetch failed for {company_id}: {e}")
+            result = None
+
+        if not result:
+            from models.expense_categories import DEFAULT_EXPENSE_CATEGORIES
+            categories = DEFAULT_EXPENSE_CATEGORIES
+        else:
+            categories = result.get('categories') or []
+
+        if not categories:
+            from models.expense_categories import DEFAULT_EXPENSE_CATEGORIES
+            categories = DEFAULT_EXPENSE_CATEGORIES
+
+        keys = []
+        lines = []
+        for cat in categories:
+            key = cat.get('key', '')
+            desc = cat.get('description', '')
+            keys.append(key)
+            lines.append(f'  - {key}: {desc}' if desc else f'  - {key}')
+
+        return ', '.join(keys), '\n'.join(lines)
 
     def _convert_to_standard_format(self, llm_result: Dict) -> Dict[str, Any]:
         """Convert LLM JSON result to standard extracted_data format."""
@@ -380,16 +462,16 @@ IMPORTANT:
             'receiver_name': llm_result.get('receiver_name'),
             'receiver_address': llm_result.get('receiver_address'),
             'receiver_email': llm_result.get('receiver_email'),
-            'total_amount': self._parse_amount(llm_result.get('total_amount')),
-            'total_tax_amount': self._parse_amount(
+            'total_amount': safe_float(llm_result.get('total_amount')),
+            'total_tax_amount': safe_float(
                 llm_result.get('total_tax_amount')
             ),
-            'net_amount': self._parse_amount(llm_result.get('net_amount')),
+            'net_amount': safe_float(llm_result.get('net_amount')),
             'currency': _normalize_currency(llm_result.get('currency')),
             'items': [],
             'entities_with_bounds': [],
             'all_ibans': [],
-            'expense_category': llm_result.get('expense_category', 'other')
+            'expense_category': llm_result.get('expense_category', 'miscellaneous')
         }
 
         for item in llm_result.get('line_items', []):
@@ -399,8 +481,8 @@ IMPORTANT:
                 'description': item.get('description'),
                 'quantity': self._parse_number(item.get('quantity')),
                 'unit': item.get('unit'),
-                'unit_price': self._parse_amount(item.get('unit_price')),
-                'amount': self._parse_amount(item.get('amount'))
+                'unit_price': safe_float(item.get('unit_price')),
+                'amount': safe_float(item.get('amount'))
             })
 
         for iban in llm_result.get('all_ibans', []):
@@ -437,21 +519,8 @@ IMPORTANT:
             'total_amount': None, 'total_tax_amount': None,
             'net_amount': None, 'currency': None,
             'items': [], 'entities_with_bounds': [],
-            'all_ibans': [], 'expense_category': 'other'
+            'all_ibans': [], 'expense_category': 'miscellaneous'
         }
-
-    @staticmethod
-    def _parse_amount(value) -> Optional[float]:
-        """Parse amount string/number to float."""
-        if value is None:
-            return None
-        try:
-            if isinstance(value, (int, float)):
-                return float(value)
-            cleaned = str(value).replace('.', '').replace(',', '.').strip()
-            return float(cleaned)
-        except (ValueError, TypeError):
-            return None
 
     @staticmethod
     def _parse_number(value) -> Optional[float]:

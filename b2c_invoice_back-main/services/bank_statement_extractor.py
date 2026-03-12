@@ -1,10 +1,11 @@
 """
-Bank Statement Extractor - Hybrid Python + LLM extraction.
+Bank Statement Extractor - Page-based AI extraction.
 
 Strategy:
 - Table layout reconstructed from OCR block coordinates (Python)
-- Transactions parsed in Python (reliable column mapping)
-- Header/summary fields extracted via GPT-4o-mini (flexible parsing)
+- Text split into pages, each page processed by a separate AI call
+- First page: header + transactions; continuation pages: transactions only
+- Transactions validated in Python (amount/date/type)
 - Totals computed from transactions (not from LLM — more reliable)
 - Universal: works with any bank, any language, any country
 """
@@ -16,8 +17,6 @@ import logging
 from typing import Optional, Dict, Any, List, Tuple
 
 from services.bank_statement_utils import (
-    parse_date, parse_amount,
-    is_skip_line, is_non_transaction, is_credit_description,
     safe_float, detect_currency_from_text, normalize_currency as _normalize_currency,
 )
 
@@ -25,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class BankStatementExtractor:
-    """Hybrid Python + LLM bank statement extraction."""
+    """Full AI bank statement extraction."""
 
     def __init__(self, openai_client=None):
         self._openai = openai_client
@@ -43,42 +42,40 @@ class BankStatementExtractor:
         ocr_index: Dict[str, List[Dict]],
         page_count: int
     ) -> Dict[str, Any]:
-        """Main entry: reconstruct table, parse transactions, LLM headers."""
+        """Main entry: reconstruct table, AI extract, validate, compute totals."""
+        # 1. Table reconstruction (geometric — keeps column alignment for AI)
         table_text, line_pos = _reconstruct_table_text(ocr_index, page_count)
-
-        # Step 1: Parse transactions in Python (reliable)
-        transactions = _parse_transactions(table_text, line_pos)
-
-        # Fallback: parse from flat OCR text if table reconstruction empty
-        if not transactions and ocr_text:
-            transactions = _parse_from_flat_text(ocr_text)
-
-        # Enrich with page/y positions from line metadata
-        for tx in transactions:
-            idx = tx.pop('_line_idx', None)
-            if idx is not None and idx < len(line_pos):
-                p, y0, y1 = line_pos[idx]
-                if p >= 0:
-                    tx['page'] = p
-                    tx['y_min'] = round(y0, 4)
-                    tx['y_max'] = round(y1, 4)
-
-        logger.info(f"Python-parsed {len(transactions)} transactions")
         source_text = table_text or ocr_text
-        header = self._llm_extract_headers(source_text)
 
-        # Currency post-processing: if LLM returned null, try regex fallback
-        llm_curr = header.get('currency')
-        if not llm_curr:
+        # 2. Page-based AI extraction
+        try:
+            result = self._ai_extract_statement(source_text, page_count)
+        except Exception as e:
+            logger.error(f"AI extraction failed: {e}")
+            return empty_bank_statement_data()
+
+        # 3. Build header
+        header = _convert_header(result)
+
+        # Currency fallback
+        if not header.get('currency'):
             detected = detect_currency_from_text(source_text)
             if detected:
                 header['currency'] = detected
                 logger.info(f"Bank stmt currency fallback: {detected}")
 
+        # 4. Validate and clean transactions (preserve position data)
+        transactions = _validate_transactions(result.get('transactions', []))
+        logger.info(f"AI extracted {len(transactions)} validated transactions")
+
+        # 4b. Match transactions to line_pos for bounding box data
+        _attach_line_positions(transactions, source_text, line_pos)
+
+        # 5. Compute totals from validated transactions
         header['transactions'] = transactions
         _compute_totals(header, transactions)
 
-        # Normalize transaction amounts to EUR for cross-currency matching
+        # 6. Currency normalization for reconciliation
         try:
             from services.exchange_rate_service import normalize_transaction
             stmt_currency = header.get('currency')
@@ -89,301 +86,226 @@ class BankStatementExtractor:
 
         return header
 
-    def _llm_extract_headers(self, text: str) -> Dict[str, Any]:
-        """Extract header/summary fields via GPT-4o-mini (generic)."""
-        prompt = f"""Extract bank/credit card statement header information.
-Do NOT extract individual transactions — only summary/header fields.
+    # ----------------------------------------------------------
+    # Page-based AI extraction
+    # ----------------------------------------------------------
 
-OCR TEXT:
-{text[:12000]}
+    def _ai_extract_statement(self, text: str, page_count: int) -> Dict[str, Any]:
+        """Extract header + transactions page-by-page, then merge."""
+        pages = self._split_into_pages(text)
+        logger.info(f"Split statement into {len(pages)} page(s) (doc page_count={page_count})")
 
-RESPOND WITH JSON ONLY:
+        # First page: extract header + transactions
+        result = self._ai_call_page(pages[0], page_num=1, total_pages=len(pages), context=None)
+
+        # Subsequent pages: only transactions, with context from first page
+        for i, page_text in enumerate(pages[1:], start=2):
+            if not page_text.strip():
+                continue
+            page_result = self._ai_call_page(
+                page_text, page_num=i, total_pages=len(pages),
+                context={
+                    'bank_name': result.get('bank_name'),
+                    'currency': result.get('currency'),
+                    'previous_transactions_count': len(result.get('transactions', [])),
+                },
+            )
+            # Merge transactions
+            result['transactions'] = result.get('transactions', []) + page_result.get('transactions', [])
+            # Update closing_balance from last page if present
+            if page_result.get('closing_balance') is not None:
+                result['closing_balance'] = page_result['closing_balance']
+
+        return result
+
+    def _split_into_pages(self, text: str) -> List[str]:
+        """Split text into pages using markers or page-break patterns."""
+        # 1. Reconstructed text uses '--- Page N ---' markers
+        marker_parts = re.split(r'---\s*Page\s+\d+\s*---', text)
+        if len(marker_parts) > 1:
+            return [p for p in marker_parts if p.strip()]
+
+        # 2. Common page-break patterns in raw OCR text
+        page_pattern = re.compile(
+            r'(?:Ekstre\s+Sayfas[ıi]\s+\d+\s*/\s*\d+'   # Turkish: Ekstre Sayfası 1/4
+            r'|Page\s+\d+\s+of\s+\d+'                     # English: Page 1 of 5
+            r'|Seite\s+\d+\s+von\s+\d+'                   # German: Seite 1 von 3
+            r'|\f)',                                        # Form feed
+            re.IGNORECASE,
+        )
+        parts = page_pattern.split(text)
+        if len(parts) > 1:
+            return [p for p in parts if p.strip()]
+
+        # 3. Fallback: single page
+        return [text]
+
+    def _ai_call_page(
+        self, page_text: str, page_num: int, total_pages: int,
+        context: Optional[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """AI call for a single page of the statement."""
+        is_first = context is None
+
+        if is_first:
+            role_instruction = (
+                "You are a bank statement parser. Extract ALL information from this OCR text.\n"
+                f"This is page {page_num} of {total_pages}."
+            )
+            json_schema = """\
 {{
-    "bank_name": "full bank name",
-    "account_holder": "account holder name or null",
-    "account_number": "IBAN, account number, or customer ID",
-    "card_number": "masked card number or null",
-    "statement_date": "YYYY-MM-DD (statement issue date)",
-    "statement_period_start": "YYYY-MM-DD",
-    "statement_period_end": "YYYY-MM-DD",
-    "currency": "MUST be 3-letter ISO 4217 code (EUR, USD, GBP, TRY, CHF, etc). Convert symbols: €=EUR, $=USD, £=GBP, ₺=TRY, TL=TRY. Return null if uncertain. NEVER return symbols.",
-    "opening_balance": number or null,
-    "closing_balance": number or null,
-    "minimum_payment": number or null,
-    "due_date": "YYYY-MM-DD or null"
-}}
+  "bank_name": "string",
+  "account_holder": "string or null",
+  "account_number": "string or null",
+  "card_number": "string or null",
+  "statement_date": "YYYY-MM-DD or null",
+  "statement_period_start": "YYYY-MM-DD or null",
+  "statement_period_end": "YYYY-MM-DD or null",
+  "currency": "EUR",
+  "opening_balance": number or null,
+  "closing_balance": number or null,
+  "minimum_payment": number or null,
+  "due_date": "YYYY-MM-DD or null",
+  "transactions": [
+    {{
+      "date": "YYYY-MM-DD",
+      "description": "full transaction description",
+      "amount": 123.45,
+      "type": "debit or credit",
+      "vendor_name": "clean merchant name or null"
+    }}
+  ]
+}}"""
+        else:
+            bank = context.get('bank_name', 'unknown')
+            currency = context.get('currency', 'unknown')
+            prev_count = context.get('previous_transactions_count', 0)
+            role_instruction = (
+                f"You are a bank statement parser. This is a CONTINUATION page ({page_num} of {total_pages}).\n"
+                f"Bank: {bank}, Currency: {currency}. "
+                f"Previous pages had {prev_count} transactions.\n"
+                "Extract ALL transactions from this page — every single row. "
+                "Do NOT repeat transactions from earlier pages. "
+                "If unsure whether a transaction was on a previous page, include it."
+            )
+            json_schema = """\
+{{
+  "closing_balance": number or null,
+  "transactions": [
+    {{
+      "date": "YYYY-MM-DD",
+      "description": "full transaction description",
+      "amount": 123.45,
+      "type": "debit or credit",
+      "vendor_name": "clean merchant name or null"
+    }}
+  ]
+}}"""
+
+        prompt = f"""{role_instruction}
+
+READING THE TABLE STRUCTURE:
+- First identify the column headers in the document (e.g., Date, Description,
+  Amount, Debit, Credit, Incoming, Outgoing, Balance, Bonus, etc.)
+- Column headers define which number is the transaction amount.
+- IGNORE columns that are NOT the main transaction amount (e.g., Bonus points,
+  loyalty rewards, miles, cashback percentages). Use ONLY the primary amount column.
+- If amounts have signs: negative = money out (debit), positive = money in (credit).
+- If separate Debit/Credit or Incoming/Outgoing columns exist: the column where
+  the amount appears determines the type.
+- Installment info like "482,00x3=1.446,00 1.Taksit": use ONLY the period
+  amount (first number before 'x': 482.00), NOT the total installment amount.
+- MULTI-COLUMN STATEMENTS: Some statements have separate Incoming/Outgoing (or
+  Credit/Debit) columns PLUS a running balance column (often labeled "Amount",
+  "Balance", "Saldo", "Bakiye"). The running balance shows the account balance
+  AFTER each transaction — it is NOT the transaction amount. Use ONLY the
+  Incoming/Outgoing/Credit/Debit column values as the real transaction amount.
+  The running balance column typically has monotonically changing values.
+- When a table row has empty cells (shown as missing tab-separated values),
+  count the columns carefully using the header row to identify which column
+  each value belongs to.
+- Currency conversions (e.g. "Converted 317.01 GBP to 364.57 EUR") and
+  fee charges (e.g. "Charges for: CARD-xxx") ARE real transactions — extract them.
 
 RULES:
+- Extract ONLY real transactions. SKIP: balance lines (old/new/opening/closing balance),
+  column headers, page headers/footers, bank name repeats, disclaimers, summaries, totals.
+- amounts: Use the EXACT numbers from the document. Never calculate or round.
+- type: "SEPA-Credit Transfer"/"Überweisung" = debit (money going OUT).
+  "Gutschrift"/"refund"/"iade"/"Eingang" = credit (money coming IN).
+- vendor_name: Extract clean merchant/payee name. Strip SEPA, Lastschrift, IBAN, BIC,
+  reference numbers, payment method labels.
+- dates: Return as YYYY-MM-DD.
+- currency: 3-letter ISO 4217 code (EUR, USD, TRY, GBP, CHF). Convert symbols.
 - opening_balance: previous period balance / önceki bakiye / Anfangssaldo
 - closing_balance: current period balance / dönem borcu / Endsaldo
-- All amounts as plain numbers (no currency symbols or separators)
-- Dates in YYYY-MM-DD format
-- Return null for fields not found in the document"""
+- All amounts as plain numbers (no currency symbols or separators).
+- Extract ALL transactions on this page — do not skip any.
+- Read descriptions fully and accurately.
+- Determine income vs outcome correctly from signs, column position, or context.
 
+OCR TEXT:
+{page_text}
+
+RESPOND WITH JSON ONLY:
+{json_schema}"""
+
+        resp = self.openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=16000,
+            response_format={"type": "json_object"},
+        )
+        parsed = json.loads(resp.choices[0].message.content)
+        tx_count = len(parsed.get('transactions', []))
+        logger.info(f"Page {page_num}/{total_pages}: extracted {tx_count} transactions")
+        return parsed
+
+
+# ------------------------------------------------------------------
+# Transaction validation
+# ------------------------------------------------------------------
+
+def _validate_transactions(raw_txs: list) -> list:
+    """Validate AI-extracted transactions."""
+    validated = []
+    for tx in raw_txs:
+        if not isinstance(tx, dict):
+            continue
+        # Amount must be a valid number
+        amt = tx.get('amount')
+        if amt is None:
+            continue
         try:
-            response = self.openai_client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0,
-                max_tokens=500,
-                response_format={"type": "json_object"}
-            )
-            result = json.loads(response.choices[0].message.content)
-            return _convert_header(result)
-        except Exception as e:
-            logger.error(f"Bank statement header LLM error: {e}")
-            return empty_bank_statement_data()
-
-
-# ------------------------------------------------------------------
-# Python-based transaction parsing
-# ------------------------------------------------------------------
-
-def _detect_column_format(text: str) -> str:
-    """Detect column format from header area."""
-    header = '\n'.join(text.split('\n')[:30]).lower()
-    if (('incoming' in header and 'outgoing' in header) or
-            ('eingang' in header and 'ausgang' in header) or
-            ('entrées' in header and 'sorties' in header)):
-        return 'incoming_outgoing'
-    return 'standard'
-
-
-def _parse_transactions(table_text: str, line_pos: list = None) -> List[Dict[str, Any]]:
-    """Parse transactions — dispatches to format-specific parser."""
-    if not table_text:
-        return []
-    fmt = _detect_column_format(table_text)
-    if fmt == 'incoming_outgoing':
-        return _parse_incoming_outgoing(table_text)
-    return _parse_standard(table_text)
-
-
-def _parse_standard(table_text: str) -> List[Dict[str, Any]]:
-    """Parse transactions from standard (Turkish/generic) table text."""
-    transactions: List[Dict[str, Any]] = []
-    current_date = None
-
-    for line_idx, raw_line in enumerate(table_text.split('\n')):
-        line = raw_line.strip()
-        if not line:
+            amt = abs(float(amt))
+        except (ValueError, TypeError):
             continue
-        if line.startswith('--- Page '):
-            continue
-        if is_skip_line(line):
+        if amt < 0.01:
             continue
 
-        parts = line.split('\t')
-        _, date_iso = parse_date(parts[0])
-        if date_iso:
-            current_date = date_iso
-        if not current_date:
-            continue
+        # Type must be debit or credit
+        tx_type = tx.get('type', 'debit')
+        if tx_type not in ('debit', 'credit'):
+            tx_type = 'debit'
 
-        tx = _extract_transaction_from_parts(parts, date_iso, current_date)
-        if tx:
-            tx['_line_idx'] = line_idx
-            transactions.append(tx)
-
-    return transactions
-
-
-def _extract_transaction_from_parts(
-    parts: List[str],
-    line_date: Optional[str],
-    current_date: str
-) -> Optional[Dict[str, Any]]:
-    """Extract a single transaction from tab-separated parts."""
-    if len(parts) < 2:
-        return None
-
-    start_idx = 1 if line_date else 0
-    desc_parts: List[str] = []
-    amounts: List[Tuple[float, str]] = []
-
-    for part in parts[start_idx:]:
-        part = part.strip()
-        if not part:
-            continue
-
-        # Skip installment info (e.g. "482,00x3=1.446,00 1.Taksit")
-        if re.match(r'^[\d.,x=\s]+Taksit', part, re.IGNORECASE):
-            continue
-        if re.match(r'^\d+x[\d,.]+$', part):
-            continue
-
-        amt, sign = parse_amount(part)
-        if amt is not None:
-            amounts.append((amt, sign))
-        else:
-            desc_parts.append(part)
-
-    description = ' '.join(desc_parts).strip()
-    if not description or not amounts:
-        return None
-
-    if is_non_transaction(description):
-        return None
-
-    # Last amount = actual transaction amount
-    amount, sign = amounts[-1]
-
-    is_credit = (
-        sign == '+' or
-        is_credit_description(description)
-    )
-
-    return {
-        'date': line_date or current_date,
-        'description': description,
-        'amount': amount,
-        'type': 'credit' if is_credit else 'debit',
-        'balance': None,
-    }
-
-
-def _parse_incoming_outgoing(table_text: str) -> List[Dict[str, Any]]:
-    """Parse Wise-style: Incoming/Outgoing + Balance columns.
-
-    Transactions may span 2 lines: amounts on line 1, date on line 2.
-    First amount = transaction amount (last is balance).
-    """
-    transactions: List[Dict[str, Any]] = []
-    pending: Optional[Dict[str, Any]] = None
-
-    for line_idx, raw_line in enumerate(table_text.split('\n')):
-        line = raw_line.strip()
-        if not line or line.startswith('--- Page ') or is_skip_line(line):
-            continue
-
-        parts = line.split('\t')
-        _, date_iso = parse_date(parts[0])
-
-        # Collect description and amounts
-        start_idx = 1 if date_iso else 0
-        desc_parts: List[str] = []
-        amounts: List[Tuple[float, str]] = []
-        for part in parts[start_idx:]:
-            part = part.strip()
-            if not part:
-                continue
-            amt, sign = parse_amount(part)
-            if amt is not None:
-                amounts.append((amt, sign))
-            else:
-                desc_parts.append(part)
-
-        description = ' '.join(desc_parts).strip()
-
-        if amounts and description and not is_non_transaction(description):
-            # Transaction line: has amounts + meaningful description
-            amount, sign = amounts[0]  # First amount = tx amount
-            if amount == 0:
-                continue  # Skip zero-amount lines (headers/summaries)
-            if pending and pending.get('date'):
-                transactions.append(pending)
-            # IO format: '-' = Outgoing (debit), else = Incoming (credit)
-            is_credit = sign != '-'
-            pending = {
-                'date': date_iso,
-                'description': description,
-                'amount': amount,
-                'type': 'credit' if is_credit else 'debit',
-                'balance': amounts[-1][0] if len(amounts) > 1 else None,
-                '_line_idx': line_idx,
-            }
-        elif date_iso and pending and not pending.get('date'):
-            # Date-only line → completes the pending transaction
-            pending['date'] = date_iso
-            transactions.append(pending)
-            pending = None
-        elif date_iso and pending and pending.get('date'):
-            # New date, pending already has date → emit pending
-            transactions.append(pending)
-            pending = None
-
-    # Flush remaining
-    if pending and pending.get('date'):
-        transactions.append(pending)
-
-    return transactions
-
-
-# ------------------------------------------------------------------
-# Flat text fallback (when ocr_index is unavailable)
-# ------------------------------------------------------------------
-
-def _parse_from_flat_text(ocr_text: str) -> List[Dict[str, Any]]:
-    """Parse transactions from flat OCR text (no coordinate data).
-
-    Scans lines for date patterns, then collects description + amount
-    from subsequent tokens on the same or following lines.
-    """
-    transactions: List[Dict[str, Any]] = []
-    current_date = None
-    io_fmt = bool(re.search(
-        r'incoming\s+outgoing|eingang\s+ausgang|entrées\s+sorties',
-        ocr_text[:2000], re.IGNORECASE
-    ))
-    lines = ocr_text.split('\n')
-
-    for line in lines:
-        line = line.strip()
-        if not line or is_skip_line(line):
-            continue
-
-        # Check if line starts with a date
-        tokens = re.split(r'\s{2,}|\t', line)  # split on 2+ spaces or tab
-        if not tokens:
-            continue
-
-        _, date_iso = parse_date(tokens[0].strip())
-        if date_iso:
-            current_date = date_iso
-
-        if not current_date:
-            continue
-
-        # Try to find amount in the line
-        desc_parts: List[str] = []
-        amounts: List[Tuple[float, str]] = []
-        start = 1 if date_iso else 0
-
-        for token in tokens[start:]:
-            token = token.strip()
-            if not token:
-                continue
-            if re.match(r'^[\d.,x=\s]+Taksit', token, re.IGNORECASE):
-                continue
-            if re.match(r'^\d+x[\d,.]+$', token):
-                continue
-            amt, sign = parse_amount(token)
-            if amt is not None:
-                amounts.append((amt, sign))
-            else:
-                desc_parts.append(token)
-
-        description = ' '.join(desc_parts).strip()
-        if not description or not amounts:
-            continue
-        if is_non_transaction(description):
-            continue
-
-        amount, sign = amounts[0] if io_fmt else amounts[-1]
-        if io_fmt:
-            is_credit = sign != '-'
-        else:
-            is_credit = sign == '+' or is_credit_description(description)
-
-        transactions.append({
-            'date': date_iso or current_date,
-            'description': description,
-            'amount': amount,
-            'type': 'credit' if is_credit else 'debit',
+        entry = {
+            'date': tx.get('date'),
+            'description': str(tx.get('description', '')).strip(),
+            'amount': round(amt, 2),
+            'type': tx_type,
+            'vendor_name': tx.get('vendor_name'),
             'balance': None,
-        })
-
-    return transactions
+        }
+        # Preserve position data if present
+        if 'page' in tx:
+            entry['page'] = tx['page']
+        if 'y_min' in tx:
+            entry['y_min'] = tx['y_min']
+        if 'y_max' in tx:
+            entry['y_max'] = tx['y_max']
+        validated.append(entry)
+    return validated
 
 
 # ------------------------------------------------------------------
@@ -448,15 +370,102 @@ def _reconstruct_table_text(
             result_lines.append(f'--- Page {page_num + 1} ---')
             line_pos.append((-1, 0, 0))
 
+        # Detect column positions from widest row (likely header) per page
+        col_centers: list = []
+        if rows:
+            widest_row = max(rows, key=len)
+            widest_row_sorted = sorted(widest_row, key=lambda it: _bbox_x(it))
+            col_centers = [_bbox_x(it) for it in widest_row_sorted]
+
         for row in rows:
             row.sort(key=lambda it: _bbox_x(it))
-            texts = [it.get('text', '').strip() for it in row if it.get('text', '').strip()]
-            if texts:
-                result_lines.append('\t'.join(texts))
-                ys = [v.get('y', 0) for it in row for v in it.get('bbox', [])]
-                line_pos.append((page_num, min(ys) if ys else 0, max(ys) if ys else 0))
+            items_with_text = [(it, it.get('text', '').strip()) for it in row if it.get('text', '').strip()]
+            if not items_with_text:
+                continue
+
+            if col_centers:
+                # Place each item in nearest column slot
+                slots = [''] * len(col_centers)
+                for it, txt in items_with_text:
+                    x = _bbox_x(it)
+                    best_col = min(range(len(col_centers)), key=lambda c: abs(x - col_centers[c]))
+                    slots[best_col] = (slots[best_col] + ' ' + txt).strip() if slots[best_col] else txt
+                result_lines.append('\t'.join(slots))
+            else:
+                # Fallback: no column info, just join texts
+                result_lines.append('\t'.join(txt for _, txt in items_with_text))
+
+            ys = [v.get('y', 0) for it in row for v in it.get('bbox', [])]
+            line_pos.append((page_num, min(ys) if ys else 0, max(ys) if ys else 0))
 
     return '\n'.join(result_lines), line_pos
+
+
+def _attach_line_positions(
+    transactions: List[Dict[str, Any]],
+    source_text: str,
+    line_pos: List[Tuple[int, float, float]],
+) -> None:
+    """Match validated transactions to reconstructed-table line positions.
+
+    For each transaction, find the best matching line in source_text by checking
+    if the transaction description (or date+amount) appears in that line.
+    Attaches page, y_min, y_max to each transaction dict in-place.
+    """
+    if not line_pos or not source_text:
+        return
+
+    lines = source_text.split('\n')
+    # line_pos and lines should be parallel lists
+    if len(lines) != len(line_pos):
+        return
+
+    used = set()
+    for tx in transactions:
+        desc = (tx.get('description') or '').lower().strip()
+        date = (tx.get('date') or '').strip()
+        amt_str = str(tx.get('amount', ''))
+        if not desc and not date:
+            continue
+
+        best_idx = -1
+        best_score = 0
+
+        for i, line_text in enumerate(lines):
+            if i in used:
+                continue
+            page_num, y_min, y_max = line_pos[i]
+            if page_num < 0:  # page separator marker
+                continue
+
+            lt = line_text.lower()
+            score = 0
+
+            # Check description words overlap
+            if desc:
+                desc_words = desc.split()
+                matched_words = sum(1 for w in desc_words if w in lt)
+                if desc_words:
+                    score = matched_words / len(desc_words)
+
+            # Boost if date found in line
+            if date and date in line_text:
+                score += 0.3
+
+            # Boost if amount found in line
+            if amt_str and amt_str in line_text:
+                score += 0.2
+
+            if score > best_score:
+                best_score = score
+                best_idx = i
+
+        if best_idx >= 0 and best_score >= 0.3:
+            used.add(best_idx)
+            page_num, y_min, y_max = line_pos[best_idx]
+            tx['page'] = page_num
+            tx['y_min'] = y_min
+            tx['y_max'] = y_max
 
 
 def _bbox_y(item: Dict) -> float:
@@ -491,6 +500,7 @@ def _convert_header(llm_result: Dict) -> Dict[str, Any]:
         'minimum_payment': safe_float(llm_result.get('minimum_payment')),
         'due_date': llm_result.get('due_date'),
         'transactions': [],
+        'entities_with_bounds': [],
     }
 
 
@@ -506,4 +516,5 @@ def empty_bank_statement_data() -> Dict[str, Any]:
         'total_debits': None, 'total_credits': None,
         'minimum_payment': None, 'due_date': None,
         'transactions': [],
+        'entities_with_bounds': [],
     }

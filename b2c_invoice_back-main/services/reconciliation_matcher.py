@@ -30,6 +30,11 @@ MAX_DOCUMENTS = 5000
 
 def _calc_score_args(tx: Dict, doc: Dict, weights: Optional[Dict[str, float]]):
     """Build kwargs for calculate_pair_score from tx/doc dicts."""
+    # Determine if same currency
+    tx_curr = (tx.get('currency') or '').upper()
+    doc_curr = (doc.get('currency') or '').upper()
+    same_currency = bool(tx_curr and doc_curr and tx_curr == doc_curr)
+
     return dict(
         tx_amount=abs(float(tx.get('amount', 0))),
         tx_date=tx.get('date'),
@@ -38,6 +43,8 @@ def _calc_score_args(tx: Dict, doc: Dict, weights: Optional[Dict[str, float]]):
         doc_date=doc.get('date'),
         doc_vendor=doc.get('vendor_name'),
         doc_filename=doc.get('filename'),
+        tx_vendor=tx.get('vendor_name'),
+        same_currency=same_currency,
         weights=weights,
     )
 
@@ -200,13 +207,16 @@ def find_optimal_matches(
             detail = calculate_pair_score(
                 **_calc_score_args(transactions[tx_i], documents[doc_j], weights)
             )
-            matches.append({
+            match_entry = {
                 'tx_index': tx_i,
                 'doc_index': doc_j,
                 'score': detail['total_score'],
                 'data_quality': detail['data_quality'],
                 'breakdown': detail['breakdown'],
-            })
+            }
+            if 'matched_doc_amount' in detail:
+                match_entry['matched_doc_amount'] = detail['matched_doc_amount']
+            matches.append(match_entry)
             matched_tx.add(tx_i)
             matched_doc.add(doc_j)
 

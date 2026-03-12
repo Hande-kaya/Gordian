@@ -93,6 +93,68 @@ def add_bounding_boxes(
             })
 
 
+def add_bank_statement_bounding_boxes(
+    extracted_data: Dict[str, Any],
+    ocr_text: str,
+    ocr_index: Dict[str, List[Dict]],
+) -> None:
+    """Populate entities_with_bounds for bank statement extracted data.
+
+    - Header fields: matched via OCR text lookup (reuses _find_value_bbox)
+    - Transaction rows: use pre-computed page/y_min/y_max from line_pos
+    """
+    if not ocr_index or not ocr_text:
+        return
+
+    bounds = extracted_data.setdefault('entities_with_bounds', [])
+
+    # 1. Header fields
+    header_fields = [
+        ('bank_name', 'bank_name'),
+        ('account_holder', 'account_holder'),
+        ('account_number', 'account_number'),
+        ('card_number', 'card_number'),
+        ('statement_date', 'statement_date'),
+        ('opening_balance', 'opening_balance'),
+        ('closing_balance', 'closing_balance'),
+    ]
+    for entity_type, field_name in header_fields:
+        value = extracted_data.get(field_name)
+        if not value:
+            continue
+        value_str = str(value)
+        bbox, page = _find_value_bbox(value_str, ocr_text, ocr_index)
+        bounds.append({
+            'type': entity_type,
+            'value': value_str,
+            'confidence': 0.95 if bbox else 0.8,
+            'bounding_box': bbox,
+            'page': page if page is not None else 0,
+            'source': 'ocr_llm',
+        })
+
+    # 2. Transaction rows — full-width bounding boxes from line_pos data
+    for i, tx in enumerate(extracted_data.get('transactions') or []):
+        if tx.get('page') is None or tx.get('y_min') is None:
+            continue
+        page_num = tx['page']
+        y_min = tx['y_min']
+        y_max = tx['y_max']
+        bounds.append({
+            'type': 'transaction_row',
+            'value': tx.get('description', f'Transaction {i + 1}'),
+            'confidence': 0.9,
+            'bounding_box': [
+                {'x': 0.02, 'y': y_min},
+                {'x': 0.98, 'y': y_min},
+                {'x': 0.98, 'y': y_max},
+                {'x': 0.02, 'y': y_max},
+            ],
+            'page': page_num,
+            'source': 'line_pos',
+        })
+
+
 def _find_value_bbox(
     value: str,
     ocr_text: str,

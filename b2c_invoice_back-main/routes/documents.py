@@ -93,13 +93,17 @@ class DocumentList(Resource):
             page = int(request.args.get('page', 1))
             page_size = int(request.args.get('page_size', 20))
             doc_type = safe_string_param(request.args.get('type'), DOC_TYPE_WHITELIST)
+            match_status = safe_string_param(
+                request.args.get('match_status'), ('matched', 'unmatched', 'all')
+            )
 
             document_service = get_document_service()
             result = document_service.get_documents(
                 company_id=company_id,
                 doc_type=doc_type,
                 page=page,
-                page_size=page_size
+                page_size=page_size,
+                match_status=match_status
             )
 
             return {
@@ -170,6 +174,24 @@ class DocumentFieldsUpdate(Resource):
 
             if not success:
                 return {'success': False, 'message': 'Document not found or update failed'}, 404
+
+            # Mark linked matches as stale when significant fields change
+            _STALE_FIELDS = {
+                'invoice_date', 'due_date', 'total_amount', 'net_amount',
+                'currency', 'supplier_name', 'receiver_name',
+                'statement_date', 'statement_period_start', 'statement_period_end',
+                'opening_balance', 'closing_balance', 'total_debits', 'total_credits',
+            }
+            changed_stale = _STALE_FIELDS & set(validated.keys())
+            if changed_stale:
+                try:
+                    from repositories.reconciliation_repository import ReconciliationRepository
+                    recon_repo = ReconciliationRepository()
+                    reason = f"fields edited: {', '.join(sorted(changed_stale))}"
+                    modified = recon_repo.mark_stale_by_document(document_id, reason)
+                    logger.info(f"Fields stale check: doc={document_id} changed={changed_stale} stale_marked={modified}")
+                except Exception as e:
+                    logger.warning(f"Fields stale marking failed (non-fatal): {e}")
 
             return {
                 'success': True,
@@ -346,6 +368,179 @@ class DocumentRestore(Resource):
         except Exception as e:
             logger.error(f"Restore error: {e}")
             return {'success': False, 'message': 'Restore failed'}, 500
+
+
+@document_ns.route('/<string:document_id>/transactions')
+class DocumentTransactionsUpdate(Resource):
+    @document_ns.doc('update_transactions')
+    @token_required
+    def patch(self, document_id):
+        """Update bank statement transactions array and re-normalize amounts."""
+        try:
+            user = request.current_user
+            company_id = user.get('company_id')
+
+            if not company_id:
+                return {'success': False, 'message': 'User company not found'}, 400
+
+            try:
+                from bson import ObjectId
+                ObjectId(document_id)
+            except Exception:
+                return {'success': False, 'message': 'Invalid document ID'}, 400
+
+            data = request.get_json()
+            if not data or 'transactions' not in data:
+                return {'success': False, 'message': 'transactions array required'}, 400
+
+            transactions = data['transactions']
+            if not isinstance(transactions, list):
+                return {'success': False, 'message': 'transactions must be an array'}, 400
+
+            # Validate each transaction
+            for i, tx in enumerate(transactions):
+                if not isinstance(tx, dict):
+                    return {'success': False, 'message': f'Transaction {i} must be an object'}, 400
+
+            # Optional: currency override
+            currency = data.get('currency')
+
+            document_service = get_document_service()
+
+            # Fetch existing document to verify ownership and type
+            doc = document_service.get_document(document_id, company_id)
+            if not doc:
+                return {'success': False, 'message': 'Document not found'}, 404
+
+            if doc.get('type') != 'bank-statement':
+                return {'success': False, 'message': 'Only bank-statement documents support transaction editing'}, 400
+
+            # Normalize each transaction
+            stmt_currency = currency or doc.get('extracted_data', {}).get('currency', 'EUR')
+            try:
+                from services.exchange_rate_service import normalize_transaction
+                for tx in transactions:
+                    normalize_transaction(tx, stmt_currency)
+            except Exception as e:
+                logger.warning(f"Normalization error (non-fatal): {e}")
+
+            # Calculate totals
+            total_debits = sum(
+                abs(tx.get('amount', 0) or 0) for tx in transactions
+                if tx.get('type') == 'debit'
+            )
+            total_credits = sum(
+                abs(tx.get('amount', 0) or 0) for tx in transactions
+                if tx.get('type') == 'credit'
+            )
+
+            # Capture old transactions for stale detection
+            old_txs = doc.get('extracted_data', {}).get('transactions') or []
+
+            # Build update
+            update_fields = {
+                'transactions': transactions,
+                'total_debits': round(total_debits, 2),
+                'total_credits': round(total_credits, 2),
+            }
+            if currency:
+                update_fields['currency'] = currency
+
+            success = document_service.update_document_fields(
+                document_id, company_id, update_fields
+            )
+
+            if not success:
+                return {'success': False, 'message': 'Update failed'}, 500
+
+            # Mark stale matches for edited transactions or currency change
+            try:
+                from repositories.reconciliation_repository import ReconciliationRepository
+                recon_repo = ReconciliationRepository()
+                old_currency = doc.get('extracted_data', {}).get('currency')
+                currency_changed = bool(currency and old_currency and currency != old_currency)
+
+                total_stale = 0
+                for i, new_tx in enumerate(transactions):
+                    old_tx = old_txs[i] if i < len(old_txs) else {}
+                    changes = []
+                    if currency_changed:
+                        changes.append(f"currency: {old_currency} → {currency}")
+                    if str(old_tx.get('date', '')) != str(new_tx.get('date', '')):
+                        changes.append(f"date: {old_tx.get('date')} → {new_tx.get('date')}")
+                    try:
+                        old_amt = float(old_tx.get('amount', 0) or 0)
+                        new_amt = float(new_tx.get('amount', 0) or 0)
+                        if abs(old_amt - new_amt) > 0.001:
+                            changes.append(f"amount: {old_amt} → {new_amt}")
+                    except (ValueError, TypeError):
+                        pass
+                    if str(old_tx.get('description', '')) != str(new_tx.get('description', '')):
+                        changes.append("description changed")
+                    if changes:
+                        modified = recon_repo.mark_stale(document_id, i, ', '.join(changes))
+                        total_stale += modified
+                logger.info(
+                    f"Stale match check: doc={document_id}, "
+                    f"currency_changed={currency_changed} ({old_currency}→{currency}), "
+                    f"txs={len(transactions)}, stale_marked={total_stale}"
+                )
+            except Exception as e:
+                logger.warning(f"Stale match marking failed (non-fatal): {e}", exc_info=True)
+
+            # Return updated document
+            updated_doc = document_service.get_document(document_id, company_id)
+            return {
+                'success': True,
+                'data': updated_doc,
+                'message': 'Transactions updated'
+            }
+
+        except Exception as e:
+            logger.error(f"Update transactions error: {e}")
+            return {'success': False, 'message': 'Failed to update transactions'}, 500
+
+
+@document_ns.route('/<string:document_id>/swap-dates')
+class DocumentSwapDates(Resource):
+    @document_ns.doc('swap_document_dates')
+    @token_required
+    def post(self, document_id):
+        """Swap day/month in all ambiguous dates of a document."""
+        try:
+            user = request.current_user
+            company_id = user.get('company_id')
+            if not company_id:
+                return {'success': False, 'message': 'Company not found'}, 400
+            try:
+                from bson import ObjectId
+                ObjectId(document_id)
+            except Exception:
+                return {'success': False, 'message': 'Invalid document ID'}, 400
+
+            service = get_document_service()
+            result = service.swap_document_dates(document_id, company_id)
+            if not result:
+                return {
+                    'success': False,
+                    'message': 'No swappable dates found or document not found'
+                }, 400
+
+            # Mark linked matches as stale — date swap affects matching
+            try:
+                from repositories.reconciliation_repository import ReconciliationRepository
+                recon_repo = ReconciliationRepository()
+                modified = recon_repo.mark_stale_by_document(
+                    document_id, "dates swapped (DD/MM ↔ MM/DD)"
+                )
+                logger.info(f"Swap-dates stale: doc={document_id} stale_marked={modified}")
+            except Exception as e:
+                logger.warning(f"Swap-dates stale marking failed (non-fatal): {e}")
+
+            return {'success': True, 'data': result, 'message': 'Dates swapped'}
+        except Exception as e:
+            logger.error(f"Swap dates error: {e}")
+            return {'success': False, 'message': 'Swap failed'}, 500
 
 
 @document_ns.route('/<string:document_id>/retry')

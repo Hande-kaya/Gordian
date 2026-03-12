@@ -33,6 +33,13 @@ class Config:
     # CORS
     CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:3003,http://localhost:3001,http://localhost:3005,https://b2c-invoice-front.pages.dev').split(',')
 
+    # Allowed redirect origins for SSO (strict allowlist, separate from CORS)
+    ALLOWED_REDIRECT_ORIGINS = [
+        o.strip().rstrip('/') for o in
+        os.getenv('ALLOWED_REDIRECT_ORIGINS', B2C_FRONTEND_URL).split(',')
+        if o.strip()
+    ]
+
     # Server - Port 5004 for Invoice Management
     PORT = int(os.getenv('PORT', 5004))
 

@@ -17,7 +17,7 @@ from flask_restx import Namespace, Resource
 from config import config
 from utils.rate_limit import rate_limit
 from routes.sso_helpers import (
-    generate_state, validate_state, build_b2c_redirect,
+    validate_origin, generate_state, validate_state, build_b2c_redirect,
     handle_sso_callback, complete_registration,
 )
 
@@ -63,7 +63,8 @@ class MicrosoftLogin(Resource):
         if not client:
             return {'success': False, 'message': 'Microsoft SSO is not configured'}, 503
 
-        state = generate_state()
+        frontend_origin = validate_origin(request.args.get('origin'))
+        state = generate_state(frontend_origin=frontend_origin)
         auth_url = client.get_authorization_request_url(
             scopes=_get_filtered_scopes(),
             state=state,
@@ -84,16 +85,17 @@ class MicrosoftCallback(Resource):
             desc = request.args.get('error_description', error)
             return redirect(build_b2c_redirect(success='false', error=desc))
 
-        if not validate_state(request.args.get('state')):
+        is_valid, frontend_origin = validate_state(request.args.get('state'))
+        if not is_valid:
             return redirect(build_b2c_redirect(success='false', error='invalid_state'))
 
         code = request.args.get('code')
         if not code:
-            return redirect(build_b2c_redirect(success='false', error='missing_code'))
+            return redirect(build_b2c_redirect(base_url=frontend_origin, success='false', error='missing_code'))
 
         client = _get_msal_client()
         if not client:
-            return redirect(build_b2c_redirect(success='false', error='sso_not_configured'))
+            return redirect(build_b2c_redirect(base_url=frontend_origin, success='false', error='sso_not_configured'))
 
         try:
             result = client.acquire_token_by_authorization_code(
@@ -101,18 +103,18 @@ class MicrosoftCallback(Resource):
                 redirect_uri=config.AZURE_AD_REDIRECT_URI,
             )
         except Exception as exc:
-            return redirect(build_b2c_redirect(success='false', error=str(exc)))
+            return redirect(build_b2c_redirect(base_url=frontend_origin, success='false', error=str(exc)))
 
         if 'error' in result:
             err = result.get('error_description', result.get('error', 'unknown'))
-            return redirect(build_b2c_redirect(success='false', error=err))
+            return redirect(build_b2c_redirect(base_url=frontend_origin, success='false', error=err))
 
         claims = result.get('id_token_claims', {})
         email = _extract_email(claims)
         if not email:
-            return redirect(build_b2c_redirect(success='false', error='email_not_found'))
+            return redirect(build_b2c_redirect(base_url=frontend_origin, success='false', error='email_not_found'))
 
-        return handle_sso_callback(email, claims.get('name', ''), 'microsoft')
+        return handle_sso_callback(email, claims.get('name', ''), 'microsoft', frontend_origin=frontend_origin)
 
 
 @auth_microsoft_ns.route('/complete-registration')

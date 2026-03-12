@@ -127,11 +127,26 @@ def tx_to_input(tx: Dict) -> Dict:
     else:
         amount = abs(float(tx.get('amount', 0)))
 
-    return {
+    result = {
         'amount': amount,
         'date': tx.get('date'),
         'description': tx.get('description'),
     }
+    if tx.get('vendor_name'):
+        result['vendor_name'] = tx['vendor_name']
+    # Currency: original (pre-normalization) currency
+    if tx.get('original_currency'):
+        result['currency'] = tx['original_currency']
+    elif tx.get('normalized_currency'):
+        result['currency'] = tx['normalized_currency']
+    return result
+
+
+def get_doc_currency(doc: Dict) -> Optional[str]:
+    """Extract currency from document."""
+    ed = doc.get('extracted_data') or {}
+    fin = ed.get('financials') or {}
+    return fin.get('currency') or ed.get('currency') or None
 
 
 def doc_to_input(doc: Dict, match_type: str = 'expense') -> Dict:
@@ -143,6 +158,7 @@ def doc_to_input(doc: Dict, match_type: str = 'expense') -> Dict:
         'date': get_doc_date(doc),
         'vendor_name': get_doc_counterparty(doc, match_type),
         'filename': get_doc_filename(doc),
+        'currency': get_doc_currency(doc),
     }
 
 
@@ -167,7 +183,7 @@ def build_match_doc(
         'document_ref': {
             'document_id': doc['_id'],
             'filename': get_doc_filename(doc),
-            'amount': get_doc_amount(doc),
+            'amount': match_info.get('matched_doc_amount') or get_doc_amount(doc),
             'date': get_doc_date(doc),
             'vendor_name': get_doc_vendor(doc),
             'receiver_name': get_doc_receiver(doc),

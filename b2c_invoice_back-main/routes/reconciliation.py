@@ -162,7 +162,7 @@ class MatchDetail(Resource):
     @reconciliation_ns.doc('update_match_status')
     @token_required
     def patch(self, match_id):
-        """Update match status (confirmed / rejected)."""
+        """Update match status or clear stale warning."""
         user = request.current_user
         company_id = user.get('company_id')
 
@@ -170,6 +170,16 @@ class MatchDetail(Resource):
             return {'success': False, 'message': 'Company not found'}, 400
 
         body = request.get_json(silent=True) or {}
+
+        # Clear stale flag (user acknowledged the warning)
+        if body.get('clear_stale'):
+            from repositories.reconciliation_repository import ReconciliationRepository
+            repo = ReconciliationRepository()
+            cleared = repo.clear_stale(match_id, company_id)
+            if not cleared:
+                return {'success': False, 'message': 'Match not found'}, 404
+            return {'success': True}, 200
+
         new_status = body.get('status')
         if not new_status:
             return {'success': False, 'message': 'status is required'}, 400
@@ -203,6 +213,13 @@ class TransactionList(Resource):
             page, page_size = 1, 50
 
         filter_status = request.args.get('filter_status', 'all')
+        search = request.args.get('search', '').strip()
+
+        # Column filters — text-based per column (cf_date, cf_description, etc.)
+        filters = {}
+        for key, val in request.args.items():
+            if key.startswith('cf_') and val and val.strip():
+                filters[key[3:]] = val.strip()  # strip "cf_" prefix
 
         service = get_reconciliation_service()
         result = service.get_all_transactions(
@@ -210,6 +227,8 @@ class TransactionList(Resource):
             page=page,
             page_size=page_size,
             filter_status=filter_status,
+            search=search,
+            filters=filters,
         )
 
         return {'success': True, 'data': result}, 200

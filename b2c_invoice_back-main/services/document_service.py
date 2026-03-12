@@ -67,9 +67,13 @@ class DocumentService:
 
     def get_documents(
         self, company_id: str, doc_type: str = None,
-        page: int = 1, page_size: int = 20
+        page: int = 1, page_size: int = 20,
+        match_status: str = None
     ) -> dict:
-        """Get paginated documents. Hides parent containers."""
+        """Get paginated documents. Hides parent containers.
+
+        match_status: 'matched' | 'unmatched' | None (all)
+        """
         db = self._get_db()
 
         query = {
@@ -79,6 +83,23 @@ class DocumentService:
         }
         if doc_type:
             query['type'] = doc_type
+
+        # Match status filtering: restrict by document IDs in reconciliation_matches
+        matched_ids = None
+        if match_status in ('matched', 'unmatched'):
+            from repositories.reconciliation_repository import ReconciliationRepository
+            matched_ids = ReconciliationRepository().get_matched_document_ids(company_id)
+
+            if match_status == 'matched':
+                if not matched_ids:
+                    total_docs = db.documents.count_documents(query)
+                    return {'documents': [], 'total': 0, 'page': 1,
+                            'page_size': page_size, 'has_next': False, 'has_prev': False,
+                            'match_summary': {'matched': 0, 'unmatched': total_docs}}
+                query['_id'] = {'$in': [ObjectId(mid) for mid in matched_ids]}
+            else:  # unmatched
+                if matched_ids:
+                    query['_id'] = {'$nin': [ObjectId(mid) for mid in matched_ids]}
 
         page_size = min(max(1, page_size), 100)
         page = max(1, page)
@@ -95,7 +116,7 @@ class DocumentService:
             .limit(page_size)
         )
 
-        return {
+        result = {
             'documents': [self._transform_document(d) for d in cursor],
             'total': total,
             'page': page,
@@ -103,6 +124,39 @@ class DocumentService:
             'has_next': (page * page_size) < total,
             'has_prev': page > 1
         }
+
+        # Include match summary counts when any match_status filter is requested
+        if match_status is not None:
+            if matched_ids is None:
+                from repositories.reconciliation_repository import ReconciliationRepository
+                matched_ids = ReconciliationRepository().get_matched_document_ids(company_id)
+
+            # Count total completed docs (same base query without match filter)
+            base_query = {
+                'company_id': ObjectId(company_id),
+                'multi_document.is_parent': {'$ne': True},
+                'deleted_at': {'$exists': False}
+            }
+            if doc_type:
+                base_query['type'] = doc_type
+            total_docs = db.documents.count_documents(base_query)
+
+            # Count matched docs that overlap with this doc_type
+            if matched_ids and doc_type:
+                matched_query = dict(base_query)
+                matched_query['_id'] = {'$in': [ObjectId(mid) for mid in matched_ids]}
+                matched_count = db.documents.count_documents(matched_query)
+            elif matched_ids:
+                matched_count = len(matched_ids)
+            else:
+                matched_count = 0
+
+            result['match_summary'] = {
+                'matched': matched_count,
+                'unmatched': total_docs - matched_count,
+            }
+
+        return result
 
     def get_document(self, document_id: str, company_id: str) -> dict:
         """Get single document by ID with ownership check."""
@@ -360,14 +414,16 @@ class DocumentService:
                 from services.llm_extraction_service import get_llm_extraction_service
                 self._llm_extraction = get_llm_extraction_service()
 
-            # Read doc_type from DB for extraction branching
+            # Read doc_type and company_id from DB for extraction branching
             doc = db.documents.find_one(
-                {'_id': ObjectId(document_id)}, {'type': 1}
+                {'_id': ObjectId(document_id)}, {'type': 1, 'company_id': 1}
             )
             doc_type = doc.get('type', 'invoice') if doc else 'invoice'
+            company_id = str(doc['company_id']) if doc and doc.get('company_id') else None
 
             llm_result = self._llm_extraction.extract_from_ocr(
-                ocr_text, ocr_index, page_count, doc_type=doc_type
+                ocr_text, ocr_index, page_count,
+                doc_type=doc_type, company_id=company_id
             )
 
             extracted_data = llm_result['extracted_data']
@@ -718,6 +774,96 @@ class DocumentService:
             )
         return True
 
+    def swap_document_dates(self, document_id: str, company_id: str) -> dict:
+        """Swap day/month in all ambiguous dates of a document.
+
+        Toggles date_format.assumed between 'dmy' and 'mdy',
+        sets source to 'manual_swap', and swaps all date fields.
+
+        Returns updated document dict or None if not found/no swap possible.
+        """
+        from services.date_format_service import swap_date
+
+        db = self._get_db()
+        try:
+            doc_oid = ObjectId(document_id)
+            company_oid = ObjectId(company_id)
+        except Exception:
+            return None
+
+        doc = db.documents.find_one(
+            {'_id': doc_oid, 'company_id': company_oid},
+            {'extracted_data': 1, 'type': 1}
+        )
+        if not doc:
+            return None
+
+        ed = doc.get('extracted_data') or {}
+        doc_type = doc.get('type', 'invoice')
+        date_format = ed.get('date_format')
+        if not date_format:
+            date_format = {'assumed': 'dmy', 'source': 'default', 'original_dates': {}}
+
+        # Toggle assumed format
+        old_assumed = date_format.get('assumed', 'dmy')
+        new_assumed = 'mdy' if old_assumed == 'dmy' else 'dmy'
+
+        set_ops = {
+            'updated_at': datetime.utcnow(),
+            'extracted_data.date_format.assumed': new_assumed,
+            'extracted_data.date_format.source': 'manual_swap',
+        }
+        swapped_count = 0
+
+        if doc_type == 'bank-statement':
+            # Swap header date fields
+            for field in ('statement_date', 'statement_period_start',
+                          'statement_period_end', 'due_date'):
+                val = ed.get(field)
+                if val:
+                    swapped = swap_date(val)
+                    if swapped:
+                        set_ops[f'extracted_data.{field}'] = swapped
+                        swapped_count += 1
+
+            # Swap transaction dates
+            txs = ed.get('transactions') or []
+            tx_changed = False
+            for tx in txs:
+                if tx.get('date'):
+                    swapped = swap_date(tx['date'])
+                    if swapped:
+                        tx['date'] = swapped
+                        tx_changed = True
+                        swapped_count += 1
+            if tx_changed:
+                set_ops['extracted_data.transactions'] = txs
+        else:
+            # Invoice/quote/income: swap invoice_date and due_date
+            for field in ('invoice_date', 'due_date'):
+                val = ed.get(field)
+                if val:
+                    swapped = swap_date(val)
+                    if swapped:
+                        set_ops[f'extracted_data.{field}'] = swapped
+                        swapped_count += 1
+
+        if swapped_count == 0:
+            return None
+
+        db.documents.update_one({'_id': doc_oid}, {'$set': set_ops})
+        logger.info(
+            f"Swapped {swapped_count} dates in {document_id}: "
+            f"{old_assumed} → {new_assumed}"
+        )
+
+        # Re-normalize amounts after date swap
+        self._renormalize_amounts(db, doc_oid, company_oid)
+
+        # Return updated document
+        updated = db.documents.find_one({'_id': doc_oid})
+        return self._transform_document(updated) if updated else None
+
     def update_document_fields(
         self, document_id: str, company_id: str, fields: dict
     ) -> bool:
@@ -896,6 +1042,7 @@ _FIELD_MAPPING = {
     'closing_balance': [f'{_ed}.closing_balance'],
     'total_debits': [f'{_ed}.total_debits'],
     'total_credits': [f'{_ed}.total_credits'],
+    'transactions': [f'{_ed}.transactions'],
 }
 _FIELD_TO_ENTITY = {
     'invoice_number': 'invoice_id', 'invoice_type': 'invoice_type',

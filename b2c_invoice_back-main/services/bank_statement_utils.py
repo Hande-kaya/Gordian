@@ -1,12 +1,13 @@
 """
-Bank Statement Utilities - Universal parsing helpers.
+Bank Statement Utilities - Shared helpers.
 
-Date, amount, and text classification for international bank statements.
-Supports: Turkish, English, German, French formats.
+Currency detection, normalization, and text classification helpers
+used by bank_statement_extractor, llm_extraction_service,
+excel_extraction_service, reconciliation_service, and date_format_service.
 """
 
 import re
-from typing import Optional, Tuple
+from typing import Optional
 
 # ------------------------------------------------------------------
 # Month names → month number (multilingual)
@@ -33,39 +34,20 @@ MONTH_NAMES = {
 }
 
 # ------------------------------------------------------------------
-# Skip patterns — section headers / non-transaction lines
+# Compiled regex patterns (used by date_format_service)
 # ------------------------------------------------------------------
-SKIP_PATTERNS = [
-    # Turkish
-    'BONUS PROGRAM', 'PROGRAM DIŞI', 'HARCAMALARINIZ',
-    'EKSTRE ÖZETİ', 'HESAP ÖZETİ', 'HESAP BİLGİLERİ',
-    'İşlem Tarihi', 'İŞLEM TARİHİ', 'Dönem İçi İşlemler',
-    'Kalan Borç', 'Bonus (TL)', 'Tutar (TL)', 'TUTAR (TL)',
-    'WORLDPUAN', 'FAİZ ORAN', 'Devreden',
-    # English
-    'ACCOUNT SUMMARY', 'STATEMENT SUMMARY', 'Transaction Date',
-    'TRANSACTION DATE', 'Opening Balance', 'Closing Balance',
-    'Previous Balance', 'Amount Due', 'PAYMENT DUE',
-    # German
-    'KONTOAUSZUG', 'KONTOUMSÄTZE', 'Buchungstag',
-    # Common
-    '--- Page', 'Toplam', 'Total', 'TOTAL', 'Gesamt',
-]
+_MONTH_PATTERN = '|'.join(
+    re.escape(m) for m in sorted(MONTH_NAMES.keys(), key=len, reverse=True)
+)
+DATE_MONTH_RE = re.compile(
+    rf'^(\d{{1,2}})\s+({_MONTH_PATTERN})\s+(\d{{4}})',
+    re.IGNORECASE
+)
 
-CATEGORY_HEADERS = [
-    'RESTORAN', 'FAST FOOD', 'BENZİN İSTASYONU', 'SAĞLIK',
-    'DİĞER', 'MARKET', 'GİYİM', 'EĞİTİM', 'ULAŞIM',
-]
 
-# Credit indicators (multilingual)
-CREDIT_KEYWORDS = [
-    'ÖDEMENİZ İÇİN', 'TEŞEKKÜR',
-    'İADE',
-    'PAYMENT RECEIVED', 'THANK YOU',
-    'REFUND', 'REVERSAL', 'CREDIT',
-    'GUTSCHRIFT', 'RÜCKERSTATTUNG',
-    'REMBOURSEMENT',
-]
+# ------------------------------------------------------------------
+# Text classification (used by reconciliation_service)
+# ------------------------------------------------------------------
 
 # Non-transaction description phrases
 NON_TX_PHRASES = [
@@ -75,195 +57,50 @@ NON_TX_PHRASES = [
     'Dönem içi Islemler', 'Dönem Borcunuz', 'Toplam Faiz',
     'Previous Balance', 'Statement Summary',
     'Opening Balance', 'Closing Balance',
+    'Old balance', 'New balance',
+    'Balance brought forward', 'Balance carried forward',
+    'Alter Kontostand', 'Neuer Kontostand',
+    'Anfangssaldo', 'Endsaldo',
+    'Booked transactions', 'Posted transactions',
+    'Gebuchte Umsätze',
+    'Booking date', 'Value date', 'Wertstellung',
+    'Debit Credit', 'Customer number',
+    'Created on', 'Transactions pending',
 ]
 
-# ------------------------------------------------------------------
-# Compiled regex patterns
-# ------------------------------------------------------------------
-_MONTH_PATTERN = '|'.join(
-    re.escape(m) for m in sorted(MONTH_NAMES.keys(), key=len, reverse=True)
+_CURRENCY_ONLY_RE = re.compile(
+    r'^[\d\s.,+\-:/*]*'
+    r'(?:EUR|USD|GBP|TRY|CHF|TL|€|\$|£|₺)?'
+    r'[\d\s.,+\-:/*]*$',
+    re.IGNORECASE,
 )
-DATE_MONTH_RE = re.compile(
-    rf'^(\d{{1,2}})\s+({_MONTH_PATTERN})\s+(\d{{4}})',
-    re.IGNORECASE
-)
-DATE_NUM_RE = re.compile(r'^(\d{2})[./\-](\d{2})[./\-](\d{4})$')
-# ISO: YYYY-MM-DD
-DATE_ISO_RE = re.compile(r'^(\d{4})-(\d{2})-(\d{2})$')
-
-AMOUNT_TR_RE = re.compile(
-    r'(\d{1,3}(?:\.\d{3})*,\d{2})\s*([+\-])?$'
-)
-AMOUNT_EN_RE = re.compile(
-    r'([+\-])?\s*(\d{1,3}(?:,\d{3})*\.\d{2})\s*$'
-)
-AMOUNT_SPACE_RE = re.compile(
-    r'([+\-])?\s*(\d{1,3}(?:\s\d{3})+[.,]\d{2})\s*([+\-])?$'
-)
-AMOUNT_PLAIN_RE = re.compile(
-    r'([+\-])?\s*(\d+[.,]\d{2})\s*([+\-])?$'
-)
-
-# Currency symbols to strip
-_CURRENCY_SUFFIX_RE = re.compile(
-    r'\s*(TL|TRY|USD|EUR|GBP|CHF|₺|\$|€|£)\s*$'
-)
-_CURRENCY_PREFIX_RE = re.compile(
-    r'^(TL|TRY|USD|EUR|GBP|CHF|₺|\$|€|£)\s*'
-)
-_CR_DR_RE = re.compile(r'\s*(CR|DR)\s*$', re.IGNORECASE)
-
-
-# ------------------------------------------------------------------
-# Date parsing (universal)
-# ------------------------------------------------------------------
-
-def parse_date(text: str) -> Tuple[Optional[str], Optional[str]]:
-    """Parse date in various formats → (matched_str, 'YYYY-MM-DD')."""
-    text = text.strip()
-
-    # "05 Ocak 2026", "15 January 2024", "3 März 2025"
-    m = DATE_MONTH_RE.match(text)
-    if m:
-        day = int(m.group(1))
-        month = MONTH_NAMES.get(m.group(2).lower())
-        year = int(m.group(3))
-        if month and 1 <= day <= 31:
-            return m.group(0), f"{year}-{month:02d}-{day:02d}"
-
-    # DD.MM.YYYY, DD/MM/YYYY, DD-MM-YYYY
-    m = DATE_NUM_RE.match(text)
-    if m:
-        day, month, year = int(m.group(1)), int(m.group(2)), int(m.group(3))
-        if 1 <= month <= 12 and 1 <= day <= 31:
-            return m.group(0), f"{year}-{month:02d}-{day:02d}"
-
-    # YYYY-MM-DD (ISO)
-    m = DATE_ISO_RE.match(text)
-    if m:
-        year, month, day = int(m.group(1)), int(m.group(2)), int(m.group(3))
-        if 1 <= month <= 12 and 1 <= day <= 31:
-            return m.group(0), f"{year}-{month:02d}-{day:02d}"
-
-    return None, None
-
-
-# ------------------------------------------------------------------
-# Amount parsing (universal)
-# ------------------------------------------------------------------
-
-def parse_amount(text: str) -> Tuple[Optional[float], str]:
-    """
-    Parse amount in various international formats.
-    Returns (value, sign) where sign is '+', '-', or ''.
-    """
-    text = text.strip()
-    if not text:
-        return None, ''
-
-    # Remove currency symbols
-    text = _CURRENCY_SUFFIX_RE.sub('', text).strip()
-    text = _CURRENCY_PREFIX_RE.sub('', text).strip()
-    if not text:
-        return None, ''
-
-    # Check for CR/DR suffix
-    cr_dr_sign = ''
-    cr_match = _CR_DR_RE.search(text)
-    if cr_match:
-        cr_dr_sign = '+' if cr_match.group(1).upper() == 'CR' else '-'
-        text = text[:cr_match.start()].strip()
-
-    # Space-separated first: "1 234,56" or "1 234.56" (must check before
-    # Turkish/English which would only match the partial "234,56")
-    m = AMOUNT_SPACE_RE.search(text)
-    if m:
-        prefix = m.group(1) or ''
-        suffix = m.group(3) or ''
-        cleaned = m.group(2).replace(' ', '').replace(',', '.')
-        try:
-            return float(cleaned), prefix or suffix or cr_dr_sign
-        except ValueError:
-            pass
-
-    # English: "+1,234.56" or "1,234.56"
-    m = AMOUNT_EN_RE.search(text)
-    if m:
-        prefix = m.group(1) or ''
-        before = text[:m.start()].strip()
-        if not before or re.match(r'^[\d.,x=\s]+$', before):
-            cleaned = m.group(2).replace(',', '')
-            try:
-                return float(cleaned), prefix or cr_dr_sign
-            except ValueError:
-                pass
-
-    # Turkish: "1.234,56" or "360,43+"
-    m = AMOUNT_TR_RE.search(text)
-    if m:
-        suffix = m.group(2) or ''
-        before = text[:m.start()].strip()
-        if not before or re.match(r'^[\d.,x=\s]+$', before):
-            cleaned = m.group(1).replace('.', '').replace(',', '.')
-            try:
-                return float(cleaned), suffix or cr_dr_sign
-            except ValueError:
-                pass
-
-    # Plain: "1234.56" or "1234,56"
-    m = AMOUNT_PLAIN_RE.search(text)
-    if m:
-        prefix = m.group(1) or ''
-        suffix = m.group(3) or ''
-        cleaned = m.group(2).replace(',', '.')
-        try:
-            val = float(cleaned)
-            if val >= 0.01:
-                return val, prefix or suffix or cr_dr_sign
-        except ValueError:
-            pass
-
-    return None, ''
-
-
-# ------------------------------------------------------------------
-# Text classification
-# ------------------------------------------------------------------
-
-def is_skip_line(line: str) -> bool:
-    """Check if line is a section header or non-data line."""
-    upper = line.upper()
-    for pattern in SKIP_PATTERNS:
-        if pattern.upper() in upper:
-            return True
-    for cat in CATEGORY_HEADERS:
-        if cat in upper:
-            return True
-    return False
 
 
 def is_non_transaction(desc: str) -> bool:
-    """Filter out non-transaction descriptions."""
+    """Filter out non-transaction descriptions using exact phrase matching only."""
+    desc_upper = desc.strip().upper()
     for s in NON_TX_PHRASES:
-        if s in desc:
+        if s.upper() in desc_upper:
             return True
-    if desc.count('TL') >= 3 or desc.count('USD') >= 3:
-        return True
-    if re.match(r'^\d{4}\*+\d{3,4}\s', desc):
-        return True
+    # Pure numeric/currency-only descriptions
     if re.match(r'^[\d\s.,]+$', desc):
         return True
     return False
 
 
-def is_credit_description(desc: str) -> bool:
-    """Check if description indicates a credit transaction."""
-    upper = desc.upper()
-    for keyword in CREDIT_KEYWORDS:
-        if keyword in upper:
-            return True
-    return False
+def has_meaningful_description(desc: str) -> bool:
+    """Check if description has real text beyond currency codes/numbers.
 
+    Returns False for descriptions like 'EUR', '4.806,56 EUR', '+', etc.
+    """
+    if not desc or not desc.strip():
+        return False
+    return not _CURRENCY_ONLY_RE.fullmatch(desc.strip())
+
+
+# ------------------------------------------------------------------
+# Amount helpers (used by excel_extraction_service)
+# ------------------------------------------------------------------
 
 def safe_float(value) -> Optional[float]:
     """Parse amount string/number to float (for LLM output)."""
@@ -312,13 +149,7 @@ _TEXT_PATTERNS = [
 
 
 def detect_currency_from_text(text: str) -> Optional[str]:
-    """Detect currency from symbols/codes near amounts in OCR text.
-
-    Conservative logic:
-    - Non-TRY currency only if it's the SOLE currency found (no TRY indicators)
-    - If both TRY and foreign currency present → None (ambiguous, trust LLM)
-    - Multiple foreign currencies → None (ambiguous)
-    """
+    """Detect currency from symbols/codes near amounts in OCR text."""
     found: set[str] = set()
     for pat, code in _SYMBOL_PATTERNS:
         if pat.search(text):
@@ -333,15 +164,12 @@ def detect_currency_from_text(text: str) -> Optional[str]:
     non_try = found - {'TRY'}
     has_try = 'TRY' in found
 
-    # Clear non-TRY: exactly one foreign currency, zero TRY indicators
     if len(non_try) == 1 and not has_try:
         return non_try.pop()
 
-    # TRY present → keep TRY
     if has_try:
         return 'TRY'
 
-    # Multiple foreign currencies without TRY → ambiguous
     return None
 
 
@@ -353,9 +181,7 @@ _CURRENCY_NORMALIZE_MAP = {
 
 
 def normalize_currency(raw) -> Optional[str]:
-    """Convert currency symbol/abbreviation to 3-letter ISO 4217 code.
-    Returns None if input is empty or unrecognized.
-    """
+    """Convert currency symbol/abbreviation to 3-letter ISO 4217 code."""
     if not raw:
         return None
     s = str(raw).strip()

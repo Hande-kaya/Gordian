@@ -154,7 +154,13 @@ class ReconciliationRepository:
         return result.deleted_count
 
     def delete_matches_by_document_id(self, document_id: str, company_id: str) -> int:
-        """Delete all matches referencing a document. Called on doc deletion."""
+        """Delete all matches referencing a document (as doc OR as bank statement).
+
+        A document can appear in matches as:
+        - document_ref.document_id (invoice/receipt side)
+        - transaction_ref.statement_id (bank statement side)
+        This deletes matches from BOTH sides.
+        """
         collection = get_collection(self.COLLECTION)
         try:
             doc_oid = ObjectId(document_id)
@@ -163,7 +169,10 @@ class ReconciliationRepository:
             return 0
         result = collection.delete_many({
             'company_id': company_oid,
-            'document_ref.document_id': doc_oid,
+            '$or': [
+                {'document_ref.document_id': doc_oid},
+                {'transaction_ref.statement_id': doc_oid},
+            ],
         })
         return result.deleted_count
 
@@ -267,6 +276,83 @@ class ReconciliationRepository:
         result = collection.delete_many(query)
         return result.deleted_count
 
+    def get_matched_document_ids(self, company_id: str) -> set:
+        """Return set of document_id strings that have at least one match."""
+        collection = get_collection(self.COLLECTION)
+        try:
+            company_oid = ObjectId(company_id)
+        except Exception:
+            return set()
+
+        pipeline = [
+            {'$match': {'company_id': company_oid}},
+            {'$group': {'_id': '$document_ref.document_id'}},
+        ]
+        return {str(doc['_id']) for doc in collection.aggregate(pipeline) if doc.get('_id')}
+
+    def mark_stale(self, statement_id: str, tx_index: int, reason: str) -> int:
+        """Mark matches as stale when their source transaction has been edited."""
+        collection = get_collection(self.COLLECTION)
+        try:
+            stmt_oid = ObjectId(statement_id)
+        except Exception:
+            logger.warning(f"mark_stale: invalid statement_id={statement_id}")
+            return 0
+        query = {
+            'transaction_ref.statement_id': stmt_oid,
+            'transaction_ref.tx_index': tx_index,
+        }
+        result = collection.update_many(
+            query,
+            {'$set': {
+                'stale': True,
+                'stale_reason': reason,
+                'stale_at': datetime.utcnow(),
+            }},
+        )
+        if result.modified_count:
+            logger.info(
+                f"mark_stale: stmt={statement_id} tx={tx_index} "
+                f"modified={result.modified_count} reason={reason}"
+            )
+        return result.modified_count
+
+    def mark_stale_by_document(self, document_id: str, reason: str) -> int:
+        """Mark ALL matches referencing a document (as invoice/income OR bank statement) as stale."""
+        collection = get_collection(self.COLLECTION)
+        try:
+            doc_oid = ObjectId(document_id)
+        except Exception:
+            return 0
+        result = collection.update_many(
+            {'$or': [
+                {'document_ref.document_id': doc_oid},
+                {'transaction_ref.statement_id': doc_oid},
+            ]},
+            {'$set': {
+                'stale': True,
+                'stale_reason': reason,
+                'stale_at': datetime.utcnow(),
+            }},
+        )
+        if result.modified_count:
+            logger.info(f"mark_stale_by_document: doc={document_id} modified={result.modified_count} reason={reason}")
+        return result.modified_count
+
+    def clear_stale(self, match_id: str, company_id: str) -> bool:
+        """Clear stale flag on a match (user acknowledged the warning)."""
+        collection = get_collection(self.COLLECTION)
+        try:
+            match_oid = ObjectId(match_id)
+            company_oid = ObjectId(company_id)
+        except Exception:
+            return False
+        result = collection.update_one(
+            {'_id': match_oid, 'company_id': company_oid},
+            {'$unset': {'stale': '', 'stale_reason': '', 'stale_at': ''}},
+        )
+        return result.modified_count > 0
+
     def _transform_match(self, match: Dict[str, Any]) -> Dict[str, Any]:
         """Convert ObjectIds and datetimes to strings for API response."""
         m = dict(match)
@@ -282,7 +368,7 @@ class ReconciliationRepository:
         if 'document_id' in doc_ref and isinstance(doc_ref['document_id'], ObjectId):
             doc_ref['document_id'] = str(doc_ref['document_id'])
 
-        for key in ('created_at', 'updated_at'):
+        for key in ('created_at', 'updated_at', 'stale_at'):
             if isinstance(m.get(key), datetime):
                 m[key] = m[key].isoformat()
 
