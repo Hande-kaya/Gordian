@@ -123,6 +123,50 @@
     &--clickable:hover {
         background: rgba(22, 163, 74, 0.1);
     }
+    &--stale {
+        background: rgba(239, 68, 68, 0.08);
+    }
+    &--stale.matching-row--clickable:hover {
+        background: rgba(239, 68, 68, 0.14);
+    }
+}
+
+/* Stale warning note */
+.matching-stale-warning {
+    font-size: 11px;
+    color: #dc2626;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+
+    &__text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__dismiss {
+        flex-shrink: 0;
+        width: 18px;
+        height: 18px;
+        border: 1px solid #dc2626;
+        border-radius: 4px;
+        background: rgba(220, 38, 38, 0.08);
+        color: #dc2626;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s;
+        margin-left: 2px;
+
+        &:hover {
+            background: rgba(22, 163, 74, 0.15);
+            border-color: #16a34a;
+            color: #16a34a;
+        }
+    }
 }
 
 /* Type badge */
@@ -280,4 +324,50 @@
     color: #16a34a;
     font-size: 10px;
     font-weight: 700;
+}
+
+/* Inline filter row in table header (DataDashboard pattern) */
+.matching-panel__filter-row {
+    background: var(--bg-table-header, #f8fafc) !important;
+
+    th {
+        padding: 4px 8px !important;
+        border-bottom: 1px solid var(--border-color, #e2e8f0) !important;
+    }
+}
+
+.matching-panel__no-results {
+    text-align: center;
+    padding: 32px 16px !important;
+    color: var(--text-muted, #94a3b8);
+    font-size: 13px;
+}
+
+.column-filter-input {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 5px 8px !important;
+    border: 1px solid var(--border-input, #e2e8f0) !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    color: var(--text-primary, #1e293b) !important;
+    background: var(--bg-input, #faf9f7) !important;
+
+    &::placeholder {
+        color: var(--placeholder, #94a3b8) !important;
+        font-style: italic !important;
+        font-size: 11px !important;
+    }
+
+    &:focus {
+        outline: none !important;
+        border-color: var(--primary-color, #3b82f6) !important;
+        background: var(--bg-input-focus, #fff) !important;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1) !important;
+    }
+
+    [data-theme="dark"] & {
+        color-scheme: dark;
+    }
 }

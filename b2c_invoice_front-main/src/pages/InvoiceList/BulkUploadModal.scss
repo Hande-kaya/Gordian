@@ -1,0 +1,243 @@
+/**
+ * BulkUploadModal Styles — standalone so every page importing the component gets styles.
+ */
+
+@import '../../shared/styles/variables.scss';
+
+// Animations
+@keyframes b2cModalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes b2cModalSlideUp {
+    from { opacity: 0; transform: translateY(10px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes b2cSpin { to { transform: rotate(360deg); } }
+
+// Overlay
+.bulk-upload-modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--bg-overlay);
+    display: flex; align-items: center; justify-content: center;
+    z-index: $z-modal;
+    animation: b2cModalFadeIn 0.15s ease;
+}
+
+// Modal base
+.bulk-upload-modal {
+    background: var(--bg-white);
+    border-radius: $radius-lg;
+    width: 90%;
+    max-width: 560px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    animation: b2cModalSlideUp 0.2s ease;
+
+    &__header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: $spacing-lg $spacing-xl; border-bottom: 1px solid var(--border-color);
+        h2 {
+            margin: 0; font-size: $font-size-lg; font-weight: $font-weight-semibold;
+            color: var(--text-primary); display: flex; align-items: center; gap: $spacing-sm;
+        }
+    }
+    &__close {
+        background: none; border: none; cursor: pointer; padding: 6px;
+        color: var(--text-muted); border-radius: $radius-md; transition: all $transition-fast;
+        &:hover { background: var(--bg-hover); color: var(--text-primary); }
+        &:disabled { opacity: 0.5; cursor: not-allowed; }
+    }
+
+    &__body { padding: $spacing-xl; overflow-y: auto; flex: 1; }
+
+    &__dropzone {
+        border: 2px dashed rgba($color-success, 0.35);
+        border-radius: $radius-lg;
+        padding: 40px $spacing-xl;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: linear-gradient(135deg, rgba($color-success, 0.03) 0%, rgba($color-success, 0.07) 100%);
+
+        &:hover:not(.disabled) {
+            border-color: $color-success;
+            background: linear-gradient(135deg, rgba($color-success, 0.06) 0%, rgba($color-success, 0.12) 100%);
+            .dropzone-icon { color: $color-success; transform: translateY(-2px); }
+        }
+        &.dragging {
+            border-color: $color-success;
+            background: linear-gradient(135deg, rgba($color-success, 0.08) 0%, rgba($color-success, 0.15) 100%);
+            border-style: solid;
+            .dropzone-icon { color: $color-success; transform: translateY(-4px); }
+        }
+        &.disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .dropzone-icon {
+            color: rgba($color-success, 0.5);
+            margin-bottom: $spacing-base;
+            transition: all 0.2s;
+        }
+        .dropzone-text {
+            font-size: $font-size-md;
+            color: var(--text-primary);
+            margin: 0 0 6px;
+            font-weight: $font-weight-semibold;
+        }
+        .dropzone-hint {
+            font-size: $font-size-sm;
+            color: var(--text-muted);
+            margin: 0;
+        }
+    }
+
+    &__file-list {
+        margin-top: $spacing-lg;
+        .file-list-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: $spacing-sm;
+            span { font-size: $font-size-sm; color: var(--text-secondary); font-weight: $font-weight-medium; }
+            .clear-all-btn {
+                background: none; border: none; color: $color-error; font-size: $font-size-sm; cursor: pointer;
+                padding: $spacing-xs $spacing-sm; border-radius: $radius-sm;
+                &:hover { background: $color-error-light; }
+            }
+        }
+        .file-list-items {
+            max-height: 200px; overflow-y: auto;
+            border: 1px solid var(--border-color); border-radius: $radius-base;
+        }
+        .file-item {
+            display: flex; align-items: center; gap: $spacing-md;
+            padding: 10px $spacing-md; border-bottom: 1px solid var(--border-light);
+            transition: background 0.15s;
+            &:last-child { border-bottom: none; }
+            &--error { background: $color-error-light; }
+            &--success { background: rgba($color-success, 0.06); }
+            &--uploading { background: rgba($color-success, 0.04); }
+            &__icon {
+                flex-shrink: 0; width: 24px; height: 24px;
+                display: flex; align-items: center; justify-content: center;
+                color: var(--text-secondary);
+            }
+            &__info { flex: 1; min-width: 0; }
+            &__name {
+                display: block; font-size: $font-size-base; color: var(--text-primary);
+                white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            }
+            &__error { display: block; font-size: 11px; color: $color-error; margin-top: 2px; }
+            &__size { font-size: $font-size-sm; color: var(--text-muted); flex-shrink: 0; }
+            &__remove {
+                background: none; border: none; cursor: pointer; padding: $spacing-xs;
+                color: var(--text-muted); border-radius: $radius-sm; flex-shrink: 0;
+                &:hover { background: var(--bg-hover); color: $color-error; }
+            }
+        }
+    }
+
+    &__progress {
+        margin-top: $spacing-lg;
+        .progress-bar {
+            height: 6px; background: var(--border-color); border-radius: $radius-full; overflow: hidden;
+            &__fill {
+                height: 100%;
+                background: linear-gradient(90deg, $color-success, lighten($color-success, 8%));
+                transition: width 0.3s ease;
+                border-radius: $radius-full;
+            }
+        }
+        .progress-text {
+            font-size: $font-size-sm; color: var(--text-secondary);
+            margin-top: $spacing-sm; text-align: center;
+        }
+    }
+
+    &__done-banner {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-top: $spacing-lg;
+        padding: 14px 16px;
+        background: rgba($color-success, 0.06);
+        border: 1px solid rgba($color-success, 0.2);
+        border-radius: $radius-base;
+        animation: b2cModalFadeIn 0.3s ease;
+
+        svg { flex-shrink: 0; margin-top: 1px; }
+
+        .done-banner__text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+
+            strong {
+                font-size: $font-size-base;
+                font-weight: $font-weight-semibold;
+                color: darken($color-success, 15%);
+            }
+
+            span {
+                font-size: $font-size-sm;
+                color: var(--text-secondary);
+                line-height: 1.4;
+            }
+        }
+    }
+
+    &__footer {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: $spacing-base $spacing-xl;
+        border-top: 1px solid var(--border-color);
+        background: var(--bg-hover);
+        border-radius: 0 0 $radius-lg $radius-lg;
+        .upload-stats {
+            display: flex; gap: $spacing-sm;
+            .stat {
+                font-size: $font-size-sm; padding: $spacing-xs $spacing-sm; border-radius: $radius-full; font-weight: $font-weight-medium;
+                &--success { background: $color-success-light; color: #166534; }
+                &--error { background: $color-error-light; color: #991b1b; }
+                &--pending { background: var(--bg-hover); color: var(--text-secondary); border: 1px solid var(--border-color); }
+            }
+        }
+        .footer-buttons { display: flex; gap: $spacing-md; }
+        .btn-cancel {
+            padding: 10px $spacing-lg; border: 1px solid var(--border-color); border-radius: $radius-md;
+            background: var(--bg-white); font-size: $font-size-base; font-weight: $font-weight-medium;
+            color: var(--text-primary); cursor: pointer; transition: all $transition-fast;
+            &:hover { background: var(--bg-hover); }
+        }
+        .btn-upload {
+            display: flex; align-items: center; gap: $spacing-sm; padding: 10px $spacing-xl;
+            border: none; border-radius: $radius-md;
+            background: $color-success;
+            font-size: $font-size-base; font-weight: $font-weight-semibold; color: white;
+            cursor: pointer; transition: all $transition-fast;
+            box-shadow: 0 1px 3px rgba($color-success, 0.3);
+            &:hover:not(:disabled) { background: darken($color-success, 6%); box-shadow: 0 2px 6px rgba($color-success, 0.35); }
+            &:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+            svg { flex-shrink: 0; }
+        }
+    }
+
+    .spinner-small {
+        width: 16px; height: 16px;
+        border: 2px solid rgba($color-success, 0.25);
+        border-top-color: $color-success;
+        border-radius: 50%; animation: b2cSpin 0.8s linear infinite;
+    }
+}
+
+// Mobile: full-screen modal
+@media (max-width: 768px) {
+    .bulk-upload-modal-overlay {
+        align-items: flex-end;
+    }
+
+    .bulk-upload-modal {
+        width: 100%;
+        max-width: 100vw;
+        max-height: 90vh;
+        border-radius: $radius-lg $radius-lg 0 0;
+    }
+}

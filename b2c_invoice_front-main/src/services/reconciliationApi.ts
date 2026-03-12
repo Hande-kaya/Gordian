@@ -29,7 +29,7 @@ export interface ReconciliationMatch {
     score: {
         total_score: number;
         data_quality: number;
-        breakdown: { amount: number; date: number; description: number };
+        breakdown: { amount_pct: number | null; date_days: number | null; desc: number };
         ai_score?: number;
         ai_reason?: string;
         final_score?: number;
@@ -117,16 +117,27 @@ export async function deleteMatch(matchId: string): Promise<ApiResponse<void>> {
     return apiService.delete<void>(`/api/reconciliation/matches/${matchId}`);
 }
 
+export type ColumnFilters = Record<string, string>;
+
 export async function getTransactions(
     page = 1,
     pageSize = 50,
     filterStatus: 'all' | 'matched' | 'unmatched' = 'all',
+    search = '',
+    columnFilters?: ColumnFilters,
 ): Promise<ApiResponse<TransactionsResult>> {
-    return apiService.get<TransactionsResult>('/api/reconciliation/transactions', {
+    const params: Record<string, string | number> = {
         page,
         page_size: pageSize,
         filter_status: filterStatus,
-    });
+    };
+    if (search) params.search = search;
+    if (columnFilters) {
+        for (const [key, value] of Object.entries(columnFilters)) {
+            if (value) params[`cf_${key}`] = value;
+        }
+    }
+    return apiService.get<TransactionsResult>('/api/reconciliation/transactions', params);
 }
 
 export async function createManualMatch(
@@ -146,6 +157,10 @@ export async function updateMatchStatus(
     status: 'confirmed' | 'rejected',
 ): Promise<ApiResponse<void>> {
     return apiService.patch<void>(`/api/reconciliation/matches/${matchId}`, { status });
+}
+
+export async function clearMatchStale(matchId: string): Promise<ApiResponse<void>> {
+    return apiService.patch<void>(`/api/reconciliation/matches/${matchId}`, { clear_stale: true });
 }
 
 export async function getMatchingStatus(): Promise<ApiResponse<{ matching_in_progress: boolean }>> {

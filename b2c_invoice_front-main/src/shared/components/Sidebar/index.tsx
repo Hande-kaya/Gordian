@@ -279,7 +279,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                         {(!isCollapsed || isMobile) && (
                             <div className="sidebar__user-info">
                                 <div className="sidebar__user-name">{user.name}</div>
-                                <div className="sidebar__user-email">{user.email}</div>
+                                <div className="sidebar__user-email" onClick={() => onNavigate('/settings')} style={{ cursor: 'pointer' }}>
+                                    {user.email}
+                                </div>
                             </div>
                         )}
                     </div>

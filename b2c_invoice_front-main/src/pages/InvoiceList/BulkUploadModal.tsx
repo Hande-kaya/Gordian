@@ -9,6 +9,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useLang } from '../../shared/i18n';
 import { config } from '../../utils/config';
 import { getAuthHeaders } from '../../services/api';
+import './BulkUploadModal.scss';
 
 interface FileItem {
     file: File;

@@ -16,6 +16,7 @@ import UploadPanel from './UploadPanel';
 import MatchingPanel from './MatchingPanel';
 import { EnrichedTransaction } from './matchingUtils';
 import { ExpenseIcon, IncomeIcon, BankIcon } from '../../shared/icons/NavIcons';
+import DragDropOverlay, { DropZone } from '../../components/common/DragDropOverlay';
 import './Reconciliation.scss';
 
 type UploadDocType = 'invoice' | 'bank-statement' | 'income';
@@ -32,10 +33,12 @@ const Reconciliation: React.FC = () => {
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
     const [uploadDocType, setUploadDocType] = useState<UploadDocType>('invoice');
     const [droppedFiles, setDroppedFiles] = useState<File[] | undefined>(undefined);
+    const [refreshCounter, setRefreshCounter] = useState(0);
 
     // Polling
     const pollingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const mountedRef = useRef(true);
+    const wasPendingRef = useRef(false);
 
     const fetchAll = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
@@ -59,10 +62,15 @@ const Reconciliation: React.FC = () => {
                 d => d.ocr_status === 'pending' || d.ocr_status === 'processing',
             );
             if (hasPending) {
+                wasPendingRef.current = true;
                 if (pollingTimer.current) clearTimeout(pollingTimer.current);
                 pollingTimer.current = setTimeout(() => {
                     if (mountedRef.current) fetchAll(true);
                 }, 4000);
+            } else if (wasPendingRef.current) {
+                // OCR just finished — notify matching panel to refresh
+                wasPendingRef.current = false;
+                setRefreshCounter(c => c + 1);
             }
         } catch {
             // silent fail — panels show empty
@@ -110,13 +118,36 @@ const Reconciliation: React.FC = () => {
         setUploadModalOpen(false);
         setDroppedFiles(undefined);
         fetchAll();
+        setRefreshCounter(c => c + 1);
     }, [fetchAll]);
+
+    const dropZones: DropZone[] = useMemo(() => [
+        {
+            label: t('uploadStatements') || 'Bank Statement',
+            onDrop: (files) => openUpload('bank-statement', files),
+            className: 'drag-drop-zone--bank',
+            icon: <BankIcon />,
+        },
+        {
+            label: t('uploadExpenses') || 'Expense',
+            onDrop: (files) => openUpload('invoice', files),
+            className: 'drag-drop-zone--expense',
+            icon: <ExpenseIcon />,
+        },
+        {
+            label: t('uploadIncome') || 'Income',
+            onDrop: (files) => openUpload('income', files),
+            className: 'drag-drop-zone--income',
+            icon: <IncomeIcon />,
+        },
+    ], [t, openUpload]);
 
     return (
         <Layout
             pageTitle={t('reconciliationTitle')}
             pageDescription={t('reconciliationDescription')}
         >
+            <DragDropOverlay zones={dropZones} />
             <div className="reconciliation-page">
                 {loading ? (
                     <div className="reconciliation-page__loading">
@@ -166,6 +197,7 @@ const Reconciliation: React.FC = () => {
                             expenses={expenses.filter(d => d.ocr_status === 'completed')}
                             incomes={incomes.filter(d => d.ocr_status === 'completed')}
                             onMatchingComplete={() => fetchAll()}
+                            refreshTrigger={refreshCounter}
                         />
                     </>
                 )}

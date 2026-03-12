@@ -23,6 +23,15 @@ const ENTITY_COLORS: Record<string, string> = {
     'invoice_type': 'rgba(139, 92, 246, 0.2)',
     'currency': 'rgba(234, 179, 8, 0.2)',
     'line_item': 'rgba(99, 102, 241, 0.15)',
+    // Bank statement entity types
+    'bank_name': 'rgba(59, 130, 246, 0.25)',
+    'account_holder': 'rgba(14, 165, 233, 0.25)',
+    'account_number': 'rgba(14, 165, 233, 0.2)',
+    'card_number': 'rgba(14, 165, 233, 0.2)',
+    'statement_date': 'rgba(236, 72, 153, 0.25)',
+    'opening_balance': 'rgba(34, 197, 94, 0.2)',
+    'closing_balance': 'rgba(34, 197, 94, 0.25)',
+    'transaction_row': 'rgba(251, 191, 36, 0.18)',
 };
 
 const BORDER_COLORS: Record<string, string> = {
@@ -44,6 +53,15 @@ const BORDER_COLORS: Record<string, string> = {
     'invoice_type': 'rgb(139, 92, 246)',
     'currency': 'rgb(234, 179, 8)',
     'line_item': 'rgb(99, 102, 241)',
+    // Bank statement entity types
+    'bank_name': 'rgb(59, 130, 246)',
+    'account_holder': 'rgb(14, 165, 233)',
+    'account_number': 'rgb(14, 165, 233)',
+    'card_number': 'rgb(14, 165, 233)',
+    'statement_date': 'rgb(236, 72, 153)',
+    'opening_balance': 'rgb(34, 197, 94)',
+    'closing_balance': 'rgb(34, 197, 94)',
+    'transaction_row': 'rgb(251, 191, 36)',
 };
 
 export function getEntityColor(type: string): string {

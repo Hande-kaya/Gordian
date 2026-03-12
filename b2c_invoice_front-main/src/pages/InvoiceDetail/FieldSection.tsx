@@ -21,6 +21,7 @@ interface FieldSectionProps {
     values: Record<string, any>;
     onChange: (key: string, value: any) => void;
     readOnly?: boolean;
+    headerAction?: React.ReactNode;
 }
 
 const formatValue = (val: any, type?: string): string => {
@@ -32,18 +33,21 @@ const formatValue = (val: any, type?: string): string => {
 };
 
 const FieldSection: React.FC<FieldSectionProps> = ({
-    title, fields, values, onChange, readOnly = false
+    title, fields, values, onChange, readOnly = false, headerAction
 }) => {
     // Filter out empty fields in readOnly mode for compactness
     const visibleFields = readOnly
         ? fields.filter(f => values[f.key] != null && values[f.key] !== '')
         : fields;
 
-    if (readOnly && visibleFields.length === 0) return null;
+    if (readOnly && visibleFields.length === 0 && !headerAction) return null;
 
     return (
         <div className={`field-section ${readOnly ? 'field-section--readonly' : ''}`}>
-            <h3 className="field-section__title">{title}</h3>
+            <div className="field-section__header">
+                <h3 className="field-section__title">{title}</h3>
+                {headerAction && <div className="field-section__header-action">{headerAction}</div>}
+            </div>
             <div className="field-section__grid">
                 {visibleFields.map(f => (
                     <div key={f.key} className="field-section__field">

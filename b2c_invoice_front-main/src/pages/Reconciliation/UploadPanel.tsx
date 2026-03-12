@@ -153,31 +153,29 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
                 </div>
             )}
 
-            {!compact && (
-                <div className="upload-panel__docs">
-                    <span className="upload-panel__docs-label">{t('recentDocs')}</span>
-                    {recentDocs.length === 0 && processingDocs.length === 0 ? (
-                        <p className="upload-panel__empty">{t('noDocs')}</p>
-                    ) : (
-                        <ul className="upload-panel__doc-list">
-                            {recentDocs.map(doc => (
-                                <li
-                                    key={doc.id}
-                                    className="upload-panel__doc-item"
-                                    onClick={() => navigate(getDetailRoute(doc))}
-                                >
-                                    <span className="upload-panel__doc-name" title={doc.filename}>
-                                        {doc.filename}
-                                    </span>
-                                    <span className="upload-panel__doc-metric">
-                                        {getDocMetric(doc)}
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </div>
-            )}
+            <div className={`upload-panel__docs${compact ? ' upload-panel__docs--compact' : ''}`}>
+                <span className="upload-panel__docs-label">{t('recentDocs')}</span>
+                {recentDocs.length === 0 && processingDocs.length === 0 ? (
+                    <p className="upload-panel__empty">{t('noDocs')}</p>
+                ) : (
+                    <ul className="upload-panel__doc-list">
+                        {recentDocs.slice(0, compact ? 4 : MAX_RECENT).map(doc => (
+                            <li
+                                key={doc.id}
+                                className="upload-panel__doc-item"
+                                onClick={() => navigate(getDetailRoute(doc))}
+                            >
+                                <span className="upload-panel__doc-name" title={doc.filename}>
+                                    {doc.filename}
+                                </span>
+                                <span className="upload-panel__doc-metric">
+                                    {getDocMetric(doc)}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
         </div>
     );
 };

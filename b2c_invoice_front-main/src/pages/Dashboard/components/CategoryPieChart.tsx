@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, TooltipContentProps } from 'recharts';
 import { useTheme } from '../../../context/ThemeContext';
 import { useLang } from '../../../shared/i18n';
 
@@ -46,7 +46,7 @@ const formatAmount = (value: number, currency: string): string =>
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 const renderTooltip = () =>
-    ({ active, payload }: any) => {
+    ({ active, payload }: TooltipContentProps<number, string>) => {
         if (!active || !payload?.length) return null;
         return (
             <div className="dashboard__chart-tooltip">

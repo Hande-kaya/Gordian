@@ -8,7 +8,7 @@ export const filesTranslations: Translations = {
     tr: {
         navFiles: 'Tüm Belgeler',
         filesTitle: 'Tüm Belgeler',
-        filesDescription: 'Yüklenen tüm belgeleriniz — tarih, tutar ve detaylarıyla',
+        filesDescription: 'Yüklenen tüm belgeleriniz, tarih, tutar ve detaylarıyla',
         filesFolderExpenses: 'Giderler',
         filesFolderIncome: 'Gelirler',
         filesFolderStatements: 'Banka Ekstreleri',
@@ -24,7 +24,7 @@ export const filesTranslations: Translations = {
     en: {
         navFiles: 'All Documents',
         filesTitle: 'All Documents',
-        filesDescription: 'All your uploaded documents — with dates, amounts & details',
+        filesDescription: 'All your uploaded documents with dates, amounts & details',
         filesFolderExpenses: 'Expenses',
         filesFolderIncome: 'Income',
         filesFolderStatements: 'Bank Statements',
@@ -40,7 +40,7 @@ export const filesTranslations: Translations = {
     de: {
         navFiles: 'Alle Dokumente',
         filesTitle: 'Alle Dokumente',
-        filesDescription: 'Alle hochgeladenen Dokumente — mit Datum, Betrag & Details',
+        filesDescription: 'Alle hochgeladenen Dokumente mit Datum, Betrag & Details',
         filesFolderExpenses: 'Ausgaben',
         filesFolderIncome: 'Einnahmen',
         filesFolderStatements: 'Kontoauszüge',

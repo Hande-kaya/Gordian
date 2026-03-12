@@ -10,7 +10,7 @@ export const dashboardTranslations: Translations = {
     tr: {
         // Page
         dashboardTitle: 'Dashboard',
-        dashboardDescription: 'Fatura analitik ve harcama istatistikleri',
+        dashboardDescription: 'Gider ve Gelir Analitikleri',
 
         // Stats
         totalExpenses: 'Toplam Harcama',
@@ -42,6 +42,9 @@ export const dashboardTranslations: Translations = {
         expensesActionDesc: 'Harcama listesini görüntüle ve yönet',
 
         // Chart filters
+        showValuesIn: 'Gösterilen para birimi:',
+        transactionCurrency: 'İşlem para birimi:',
+        dateRanges: 'Tarih aralığı:',
         chartFilters: 'Filtrele',
         filterCurrency: 'Para Birimi',
         filterCategory: 'Kategori',
@@ -55,12 +58,24 @@ export const dashboardTranslations: Translations = {
 
         dashboardExpenses: 'Giderler',
         dashboardIncome: 'Gelirler',
+        dashboardInvoices: 'Faturalar',
         totalIncome: 'Toplam Gelir',
+
+        // Bank dashboard
+        bankTotalDebits: 'Toplam Çıkış (Borç)',
+        bankTotalCredits: 'Toplam Giriş (Alacak)',
+        bankByBank: 'Banka Bazlı Dağılım',
+        bankMatchStatus: 'Eşleşme Durumu',
+        bankMatched: 'Eşleşen',
+        bankUnmatched: 'Eşleşmeyen',
+        bankTotalTransactions: 'Toplam İşlem',
+        bankMatchRate: 'Eşleşme Oranı',
+        bankNoData: 'Bu dönem için banka işlemi bulunamadı',
     },
     en: {
         // Page
         dashboardTitle: 'Dashboard',
-        dashboardDescription: 'Invoice analytics and spending statistics',
+        dashboardDescription: 'Expense and Income Analytics',
 
         // Stats
         totalExpenses: 'Total Expenses',
@@ -78,8 +93,8 @@ export const dashboardTranslations: Translations = {
         periodTo: 'To',
 
         // Charts
-        totalSpending: 'Total Spending',
-        spendingByCategory: 'Spending by Category',
+        totalSpending: 'Total Expenses',
+        spendingByCategory: 'Expenses by Category',
         loadingData: 'Loading...',
         noCategoryData: 'No category data for this period',
         pieAmountCol: 'Amount',
@@ -92,6 +107,9 @@ export const dashboardTranslations: Translations = {
         expensesActionDesc: 'View and manage expense list',
 
         // Chart filters
+        showValuesIn: 'Show values in:',
+        transactionCurrency: 'Transaction currency:',
+        dateRanges: 'Date ranges:',
         chartFilters: 'Filter',
         filterCurrency: 'Currency',
         filterCategory: 'Category',
@@ -105,12 +123,24 @@ export const dashboardTranslations: Translations = {
 
         dashboardExpenses: 'Expenses',
         dashboardIncome: 'Income',
+        dashboardInvoices: 'Invoices',
         totalIncome: 'Total Income',
+
+        // Bank dashboard
+        bankTotalDebits: 'Total Outgoing (Debits)',
+        bankTotalCredits: 'Total Incoming (Credits)',
+        bankByBank: 'By Bank',
+        bankMatchStatus: 'Match Status',
+        bankMatched: 'Matched',
+        bankUnmatched: 'Unmatched',
+        bankTotalTransactions: 'Total Transactions',
+        bankMatchRate: 'Match Rate',
+        bankNoData: 'No bank transactions found for this period',
     },
     de: {
         // Page
         dashboardTitle: 'Dashboard',
-        dashboardDescription: 'Rechnungsanalysen und Ausgabenstatistiken',
+        dashboardDescription: 'Ausgaben- und Einnahmenanalyse',
 
         // Stats
         totalExpenses: 'Gesamtausgaben',
@@ -142,6 +172,9 @@ export const dashboardTranslations: Translations = {
         expensesActionDesc: 'Ausgabenliste anzeigen und verwalten',
 
         // Chart filters
+        showValuesIn: 'Werte anzeigen in:',
+        transactionCurrency: 'Transaktionswährung:',
+        dateRanges: 'Datumsbereiche:',
         chartFilters: 'Filter',
         filterCurrency: 'Wahrung',
         filterCategory: 'Kategorie',
@@ -155,6 +188,18 @@ export const dashboardTranslations: Translations = {
 
         dashboardExpenses: 'Ausgaben',
         dashboardIncome: 'Einnahmen',
+        dashboardInvoices: 'Rechnungen',
         totalIncome: 'Gesamteinnahmen',
+
+        // Bank dashboard
+        bankTotalDebits: 'Gesamte Ausgänge (Soll)',
+        bankTotalCredits: 'Gesamte Eingänge (Haben)',
+        bankByBank: 'Nach Bank',
+        bankMatchStatus: 'Zuordnungsstatus',
+        bankMatched: 'Zugeordnet',
+        bankUnmatched: 'Nicht zugeordnet',
+        bankTotalTransactions: 'Gesamttransaktionen',
+        bankMatchRate: 'Zuordnungsrate',
+        bankNoData: 'Keine Banktransaktionen für diesen Zeitraum',
     },
 };

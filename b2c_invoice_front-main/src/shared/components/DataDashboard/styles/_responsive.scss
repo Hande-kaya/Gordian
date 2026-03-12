@@ -61,7 +61,7 @@
 
   .category-selector__dropdown {
     max-height: 200px;
-    z-index: 10000 !important;
+    z-index: 9999 !important;
     position: relative !important;
     background-color: $color-bg-white !important;
     border: 1px solid $color-border-dark !important;
@@ -97,11 +97,11 @@
 .select-dropdown,
 .category-dropdown,
 .recommended-dropdown {
-  z-index: 10000 !important;
+  z-index: 9999 !important;
   position: relative !important;
 }
 
 .company-selector__dropdown {
-  z-index: 10000 !important;
+  z-index: 9999 !important;
   position: absolute !important;
 }

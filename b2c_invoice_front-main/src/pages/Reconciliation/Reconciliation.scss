@@ -145,8 +145,10 @@
     /* Filter tabs */
     &__filters {
         display: flex;
+        align-items: center;
         gap: 4px;
         margin-bottom: 12px;
+        flex-wrap: wrap;
     }
 
     &__filter-tab {

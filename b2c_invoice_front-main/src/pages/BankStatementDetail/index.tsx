@@ -79,6 +79,8 @@ const BankStatementDetail: React.FC = () => {
     const [editing, setEditing] = useState(false);
     const [highlightsOn, setHighlightsOn] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [editedTransactions, setEditedTransactions] = useState<Transaction[] | null>(null);
+    const [editedCurrency, setEditedCurrency] = useState<string | null>(null);
 
     const navItems = useMemo(() => [
         { id: 'dashboard', label: t('navDashboard'), icon: <DashboardIcon />, route: '/dashboard' },
@@ -120,6 +122,8 @@ const BankStatementDetail: React.FC = () => {
 
     const handleCancel = useCallback(() => {
         setValues({ ...originalValues });
+        setEditedTransactions(null);
+        setEditedCurrency(null);
         setEditing(false);
     }, [originalValues]);
 
@@ -127,23 +131,68 @@ const BankStatementDetail: React.FC = () => {
         if (!id) return;
         setSaving(true);
         try {
+            // Save header field changes — exclude currency when it will be
+            // sent via updateTransactions so the PATCH handler can detect
+            // the old→new currency change for stale match marking.
             const changed: Record<string, any> = {};
             for (const k of Object.keys(values)) {
                 if (values[k] !== originalValues[k]) {
+                    if (k === 'currency' && editedCurrency) continue;
                     changed[k] = values[k];
                 }
             }
             if (Object.keys(changed).length > 0) {
                 await documentApi.updateDocumentFields(id, changed);
-                setOriginalValues({ ...values });
+                setOriginalValues(prev => ({ ...prev, ...changed }));
             }
+
+            // Save transaction changes (also triggers when only currency changed)
+            if (editedTransactions || editedCurrency) {
+                const res = await documentApi.updateTransactions(
+                    id,
+                    editedTransactions || transactions,
+                    editedCurrency || undefined
+                );
+                if (res.success && res.data) {
+                    setDoc(res.data);
+                    const flat = flattenDoc(res.data);
+                    setValues(flat);
+                    setOriginalValues(flat);
+                    setTransactions(getTransactions(res.data));
+                }
+                setEditedTransactions(null);
+                setEditedCurrency(null);
+            }
+
             setEditing(false);
         } catch {
             alert(t('saveError'));
         } finally {
             setSaving(false);
         }
-    }, [id, values, originalValues]);
+    }, [id, values, originalValues, editedTransactions, editedCurrency]);
+
+    const isBankStatement = doc?.type === 'bank-statement';
+    const hasDateFormat = !!doc?.extracted_data?.date_format;
+    const showSwapButton = isBankStatement || hasDateFormat;
+
+    const handleSwapDates = useCallback(async () => {
+        if (!id) return;
+        try {
+            const res = await documentApi.swapDocumentDates(id);
+            if (res.success && res.data) {
+                setDoc(res.data);
+                const flat = flattenDoc(res.data);
+                setValues(flat);
+                setOriginalValues(flat);
+                setTransactions(getTransactions(res.data));
+                setEditedTransactions(null);
+                setEditedCurrency(null);
+            }
+        } catch {
+            // silent fail
+        }
+    }, [id]);
 
     const handleDeleteConfirm = useCallback(async () => {
         if (!id) return;
@@ -232,8 +281,31 @@ const BankStatementDetail: React.FC = () => {
     }), [navItems, location.pathname, navigate, user, logout, headerActions, pageDescription]);
 
     const entities: EntityWithBounds[] = useMemo(() => {
-        return (doc?.extracted_data?.entities_with_bounds || []) as EntityWithBounds[];
-    }, [doc]);
+        const stored = (doc?.extracted_data?.entities_with_bounds || []) as EntityWithBounds[];
+        if (stored.length > 0) return stored;
+
+        // Fallback: build transaction_row entities from transaction position data
+        const txEntities: EntityWithBounds[] = [];
+        for (const tx of transactions) {
+            const txAny = tx as any;
+            if (txAny.page != null && txAny.y_min != null && txAny.y_max != null) {
+                txEntities.push({
+                    type: 'transaction_row',
+                    value: tx.description || '',
+                    confidence: 0.9,
+                    bounding_box: [
+                        { x: 0.02, y: txAny.y_min },
+                        { x: 0.98, y: txAny.y_min },
+                        { x: 0.98, y: txAny.y_max },
+                        { x: 0.02, y: txAny.y_max },
+                    ],
+                    page: txAny.page,
+                    source: 'line_pos',
+                });
+            }
+        }
+        return txEntities;
+    }, [doc, transactions]);
 
     if (loading) {
         return (
@@ -272,6 +344,19 @@ const BankStatementDetail: React.FC = () => {
                             values={values}
                             onChange={handleChange}
                             readOnly={!editing}
+                            headerAction={showSwapButton ? (
+                                <button
+                                    className="swap-dates-btn"
+                                    onClick={handleSwapDates}
+                                    title={t('swapDatesTitle')}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                                        <polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                                    </svg>
+                                    DD/MM ↔ MM/DD
+                                </button>
+                            ) : undefined}
                         />
                         <FieldSection
                             title={t('sectionBalance')}
@@ -281,8 +366,14 @@ const BankStatementDetail: React.FC = () => {
                             readOnly={!editing}
                         />
                         <TransactionsTable
-                            transactions={transactions}
-                            currency={values.currency || 'TRY'}
+                            transactions={editedTransactions || transactions}
+                            currency={editedCurrency || values.currency || 'TRY'}
+                            editable={editing}
+                            onTransactionsChange={txs => setEditedTransactions(txs)}
+                            onCurrencyChange={c => {
+                                setEditedCurrency(c);
+                                handleChange('currency', c);
+                            }}
                         />
                     </div>
                 </div>

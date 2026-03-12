@@ -5,6 +5,7 @@
 
 @import '../../shared/styles/variables.scss';
 @import '../../shared/components/HeaderActions/HeaderActions.scss';
+@import '../InvoiceDetail/InvoiceDetail.scss';
 
 // Reuse highlight toggle from InvoiceDetail
 .highlight-toggle {
@@ -51,7 +52,7 @@
 
     &__body {
         display: grid;
-        grid-template-columns: minmax(400px, 1fr) minmax(380px, 1fr);
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: 24px;
         align-items: start;
     }
@@ -106,6 +107,54 @@
         font-size: 13px;
         color: var(--text-secondary);
         padding: 16px 0;
+    }
+
+    &__search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        margin-bottom: 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: var(--bg-input, #fff);
+        transition: border-color 0.2s;
+
+        &:focus-within {
+            border-color: var(--primary-color, #3b82f6);
+        }
+
+        svg {
+            flex-shrink: 0;
+            color: var(--text-muted);
+        }
+    }
+
+    &__search-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 13px;
+        color: var(--text-primary);
+
+        &::placeholder {
+            color: var(--text-muted);
+        }
+    }
+
+    &__search-clear {
+        border: none;
+        background: none;
+        cursor: pointer;
+        font-size: 16px;
+        color: var(--text-muted);
+        padding: 0 2px;
+        line-height: 1;
+
+        &:hover {
+            color: var(--text-primary);
+        }
     }
 
     &__table-wrap {
@@ -173,12 +222,162 @@
     }
 }
 
-// Responsive
+// ========================================
+// Inline editing styles
+// ========================================
+.tx-edit-input {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 12px;
+    background: var(--bg-white);
+    color: var(--text-primary);
+    box-sizing: border-box;
+
+    &:focus {
+        border-color: var(--primary-color, #3b82f6);
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    }
+
+    &--date { min-width: 110px; }
+    &--desc { min-width: 120px; }
+    &--num { text-align: right; min-width: 80px; }
+}
+
+.tx-edit-type-toggle {
+    background: none;
+    border: 1px dashed var(--border-color);
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 12px;
+    width: 100%;
+
+    &:hover {
+        border-color: var(--primary-color, #3b82f6);
+        color: var(--primary-color, #3b82f6);
+    }
+}
+
+.tx-edit-remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 16px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    line-height: 1;
+
+    &:hover {
+        color: #dc2626;
+        background: rgba(239, 68, 68, 0.08);
+    }
+}
+
+.transactions-section {
+    &__edit-row {
+        td { vertical-align: middle; }
+    }
+
+    &__table--editable {
+        .col-actions { width: 36px; text-align: center; }
+
+        th.col-debit, th.col-credit, th.col-balance {
+            text-align: right;
+        }
+    }
+
+    &__add-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 8px;
+        padding: 6px 14px;
+        border: 1px dashed var(--border-color);
+        border-radius: 6px;
+        background: none;
+        color: var(--text-secondary);
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.15s;
+
+        &:hover {
+            border-color: var(--primary-color, #3b82f6);
+            color: var(--primary-color, #3b82f6);
+            background: rgba(59, 130, 246, 0.04);
+        }
+    }
+
+    &__empty-edit {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+}
+
+// Currency select in debit column header
+.col-debit__header {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.col-debit__currency-select {
+    padding: 1px 4px;
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    background: var(--bg-white);
+    color: var(--text-primary);
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
+// Responsive — medium screens
+@media (max-width: 1100px) {
+    .pdf-viewer-panel__content {
+        max-height: calc(100vh - 280px);
+    }
+}
+
+// Responsive — small screens, stack to single column
 @media (max-width: 900px) {
     .bank-statement-detail__body {
         grid-template-columns: 1fr;
     }
     .bank-statement-detail__pdf-col {
         position: static;
+    }
+    .pdf-viewer-panel__content {
+        max-height: 450px;
+    }
+}
+
+// Responsive — mobile, ensure edit inputs are usable
+@media (max-width: 768px) {
+    .tx-edit-input {
+        font-size: 14px; // minimum for iOS not to zoom
+        padding: 6px 8px;
+
+        &--date { min-width: 100px; }
+        &--num { min-width: 70px; }
+    }
+
+    .transactions-section__table--editable {
+        font-size: 12px;
+
+        th, td { padding: 4px 4px; }
+    }
+
+    .transactions-section__add-btn {
+        width: 100%;
+        justify-content: center;
     }
 }

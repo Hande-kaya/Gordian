@@ -13,6 +13,8 @@ $green-50: #ecfdf5;
     display: flex;
     gap: 32px;
     max-width: 840px;
+    height: calc(100vh - 160px);
+    overflow: hidden;
 
     // ── Left Sidebar ──
     &__sidebar {
@@ -221,6 +223,13 @@ $green-50: #ecfdf5;
         }
     }
 
+    &__input:disabled {
+        opacity: 1;
+        cursor: default;
+        color: var(--text-muted);
+        background: var(--bg-hover);
+    }
+
     &__btn {
         display: inline-flex;
         align-items: center;
@@ -269,6 +278,22 @@ $green-50: #ecfdf5;
             background: $color-error-light;
             color: #991b1b;
             border: 1px solid #fecaca;
+        }
+    }
+
+    &__btn--danger {
+        background: #ef4444;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-size: $font-size-base;
+        font-weight: $font-weight-medium;
+        cursor: pointer;
+        transition: background 0.15s;
+
+        &:hover {
+            background: #dc2626;
         }
     }
 

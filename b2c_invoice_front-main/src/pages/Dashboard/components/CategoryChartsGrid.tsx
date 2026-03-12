@@ -1,5 +1,5 @@
 /**
- * CategoryChartsGrid - Spending by category as a donut pie chart.
+ * CategoryChartsGrid - Expenses by category as a donut pie chart.
  */
 
 import React, { useMemo } from 'react';

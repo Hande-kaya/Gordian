@@ -18,6 +18,7 @@ export const settingsTranslations: Translations = {
         tabSubscription: 'Abonelik',
         tabUsage: 'Kullanım',
         tabAccount: 'Hesap',
+        tabDisplay: 'Görünüm',
 
         // Categories tab
         tabCategories: 'Kategoriler',
@@ -69,6 +70,7 @@ export const settingsTranslations: Translations = {
         profileSaving: 'Kaydediliyor...',
         profileSuccess: 'Profil başarıyla güncellendi.',
         profileError: 'Profil güncellenirken hata oluştu.',
+        profileEmailInvalid: 'Lütfen geçerli bir e-posta adresi girin.',
 
         // Profile photo
         profilePhoto: 'Profil Fotoğrafı',
@@ -153,6 +155,11 @@ export const settingsTranslations: Translations = {
         quotaExceeded: 'Kotanız doldu. Devam etmek için kredi satın alın.',
 
         // Account info
+        deleteAccountBtn: 'Hesabı Sil',
+        deleteAccountTitle: 'Hesabı Sil',
+        deleteAccountMessage: 'Bu işlem henüz aktif değil. Hesabınızı silmek için lütfen destek ekibiyle iletişime geçin: support@gordiananalytics.com',
+        deleteAccountConfirm: 'Anladım',
+        deleteAccountCancel: 'Vazgeç',
         accountSection: 'Hesap Bilgileri',
         accountType: 'Hesap Tipi',
         accountTypeB2C: 'Bireysel',
@@ -172,6 +179,7 @@ export const settingsTranslations: Translations = {
         tabSubscription: 'Subscription',
         tabUsage: 'Usage',
         tabAccount: 'Account',
+        tabDisplay: 'Display',
 
         // Categories tab
         tabCategories: 'Categories',
@@ -223,6 +231,7 @@ export const settingsTranslations: Translations = {
         profileSaving: 'Saving...',
         profileSuccess: 'Profile updated successfully.',
         profileError: 'Error updating profile.',
+        profileEmailInvalid: 'Please enter a valid email address.',
 
         // Profile photo
         profilePhoto: 'Profile Photo',
@@ -307,6 +316,11 @@ export const settingsTranslations: Translations = {
         quotaExceeded: 'Quota exceeded. Purchase credits to continue.',
 
         // Account info
+        deleteAccountBtn: 'Delete Account',
+        deleteAccountTitle: 'Delete Account',
+        deleteAccountMessage: 'This feature is not yet available. To delete your account, please contact our support team at: support@gordiananalytics.com',
+        deleteAccountConfirm: 'Got it',
+        deleteAccountCancel: 'Cancel',
         accountSection: 'Account Information',
         accountType: 'Account Type',
         accountTypeB2C: 'Individual',
@@ -326,6 +340,7 @@ export const settingsTranslations: Translations = {
         tabSubscription: 'Abonnement',
         tabUsage: 'Nutzung',
         tabAccount: 'Konto',
+        tabDisplay: 'Anzeige',
 
         // Categories tab
         tabCategories: 'Kategorien',
@@ -377,6 +392,7 @@ export const settingsTranslations: Translations = {
         profileSaving: 'Wird gespeichert...',
         profileSuccess: 'Profil erfolgreich aktualisiert.',
         profileError: 'Fehler beim Aktualisieren des Profils.',
+        profileEmailInvalid: 'Bitte geben Sie eine gültige E-Mail-Adresse ein.',
 
         // Profile photo
         profilePhoto: 'Profilbild',
@@ -466,5 +482,10 @@ export const settingsTranslations: Translations = {
         accountTypeB2C: 'Privat',
         memberId: 'Mitgliedsnummer',
         memberSince: 'Mitglied seit',
+        deleteAccountBtn: 'Konto löschen',
+        deleteAccountTitle: 'Konto löschen',
+        deleteAccountMessage: 'Diese Funktion ist noch nicht verfügbar. Um Ihr Konto zu löschen, wenden Sie sich bitte an unser Support-Team: support@gordiananalytics.com',
+        deleteAccountConfirm: 'Verstanden',
+        deleteAccountCancel: 'Abbrechen',
     },
 };

@@ -23,6 +23,7 @@ import { useCategories } from '../../context/CategoryContext';
 import { DISPLAY_CURRENCIES, getPreferredCurrency, setPreferredCurrency, convertCurrency } from '../../utils/currency';
 import { useUnsavedChanges, guardNavigation } from '../../shared/hooks/useUnsavedChanges';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import DragDropOverlay from '../../components/common/DragDropOverlay';
 import { DashboardIcon, ExpenseIcon, IncomeIcon, BankIcon, ReconciliationIcon, TrashIcon, FilesIcon, SettingsIcon } from '../../shared/icons/NavIcons';
 import './InvoiceList.scss';
 
@@ -65,6 +66,8 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ docType = 'invoice' }) => {
     const [dropzoneHover, setDropzoneHover] = useState(false);
     const [droppedFiles, setDroppedFiles] = useState<File[] | undefined>(undefined);
     const [hasPendingEdits, setHasPendingEdits] = useState(false);
+    const [matchFilter, setMatchFilter] = useState<'all' | 'matched' | 'unmatched'>('all');
+    const [matchSummary, setMatchSummary] = useState({ matched: 0, unmatched: 0 });
 
     const { isBlocked, confirmLeave, cancelLeave } = useUnsavedChanges(isEditing && hasPendingEdits);
 
@@ -178,6 +181,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ docType = 'invoice' }) => {
 
     const fetchData = useCallback(async (params: any = {}) => {
         const isPolling = params._polling === true;
+        const currentFilter = params._matchFilter ?? matchFilter;
         if (!isPolling && !hasDataRef.current) {
             setLoading(true);
         }
@@ -185,7 +189,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ docType = 'invoice' }) => {
         try {
             const page = params.page || 1;
             const limit = params.limit || 20;
-            const response = await documentApi.getDocuments(page, limit, docType);
+            const response = await documentApi.getDocuments(page, limit, docType, currentFilter);
             if (response.success && response.data) {
                 const docs = response.data.documents;
                 setData(docs);
@@ -198,8 +202,12 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ docType = 'invoice' }) => {
                 };
                 setPagination(pag);
 
-                // Cache first page for SWR on next visit
-                if (page === 1 && !isPolling) {
+                if (response.data.match_summary) {
+                    setMatchSummary(response.data.match_summary);
+                }
+
+                // Cache first page for SWR on next visit (only for 'all' filter)
+                if (page === 1 && !isPolling && currentFilter === 'all') {
                     try {
                         sessionStorage.setItem(listCacheKey, JSON.stringify({ documents: docs, pagination: pag }));
                     } catch { /* quota */ }
@@ -212,7 +220,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ docType = 'invoice' }) => {
                 if (hasActive) {
                     if (pollingTimer.current) clearTimeout(pollingTimer.current);
                     pollingTimer.current = setTimeout(() => {
-                        if (mountedRef.current) fetchData({ page, limit, _polling: true });
+                        if (mountedRef.current) fetchData({ page, limit, _polling: true, _matchFilter: currentFilter });
                     }, 3000);
                 }
             } else if (!isPolling) {
@@ -223,7 +231,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ docType = 'invoice' }) => {
         } finally {
             if (!isPolling) setLoading(false);
         }
-    }, [docType, listCacheKey]);
+    }, [docType, listCacheKey, matchFilter]);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -252,6 +260,11 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ docType = 'invoice' }) => {
         setDisplayCurrency(currency);
         setPreferredCurrency(currency);
     }, []);
+
+    const handleMatchFilterChange = useCallback((f: 'all' | 'matched' | 'unmatched') => {
+        setMatchFilter(f);
+        fetchData({ page: 1, limit: pagination.limit, _matchFilter: f });
+    }, [fetchData, pagination.limit]);
 
     const columns = useMemo(() => getInvoiceColumns(formatCurrency, t, displayCurrency, categories, getLabelByKey), [t, displayCurrency, categories, getLabelByKey]);
 
@@ -427,6 +440,19 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ docType = 'invoice' }) => {
                 () => t('statusFailed'), { retry: true, dismiss: true })}
             {renderDocBanner(cancelledDocs, 'cancelled', 'cancelledCount',
                 () => t('statusCancelled'), { retry: true, dismiss: true })}
+            <div className="match-filter-tabs">
+                {(['all', 'matched', 'unmatched'] as const).map(f => (
+                    <button
+                        key={f}
+                        className={`match-filter-tabs__tab${matchFilter === f ? ' match-filter-tabs__tab--active' : ''}`}
+                        onClick={() => handleMatchFilterChange(f)}
+                    >
+                        {f === 'all' && `${t('filterAll')} (${matchSummary.matched + matchSummary.unmatched || pagination.total})`}
+                        {f === 'matched' && `${t('filterMatched')} (${matchSummary.matched})`}
+                        {f === 'unmatched' && `${t('filterUnmatched')} (${matchSummary.unmatched})`}
+                    </button>
+                ))}
+            </div>
         </>
     );
 
@@ -459,8 +485,14 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ docType = 'invoice' }) => {
         </>
     );
 
+    const handleGlobalDrop = useCallback((files: File[]) => {
+        setDroppedFiles(files);
+        setIsUploadModalOpen(true);
+    }, []);
+
     return (
         <>
+            <DragDropOverlay onDrop={handleGlobalDrop} label={t('dropzoneInlineHover')} />
             <DataDashboard
                 title={docType === 'income' ? t('incomeTitle') : t('expensesTitle')}
                 pageDescription={docType === 'income' ? t('incomeDescription') : t('expensesDescription')}

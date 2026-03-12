@@ -58,6 +58,7 @@ export interface DocumentListResponse {
     page_size: number;
     has_next: boolean;
     has_prev: boolean;
+    match_summary?: { matched: number; unmatched: number };
 }
 
 // =============================================================================
@@ -67,10 +68,12 @@ export interface DocumentListResponse {
 export const getDocuments = async (
     page: number = 1,
     pageSize: number = 20,
-    type?: 'invoice' | 'quote' | 'income' | 'bank-statement'
+    type?: 'invoice' | 'quote' | 'income' | 'bank-statement',
+    matchStatus?: 'all' | 'matched' | 'unmatched'
 ): Promise<ApiResponse<DocumentListResponse>> => {
     const params: Record<string, any> = { page, page_size: pageSize };
     if (type) params.type = type;
+    if (matchStatus) params.match_status = matchStatus;
     return apiService.get<DocumentListResponse>('/api/documents', params);
 };
 
@@ -134,6 +137,25 @@ export const retryDocument = async (
     return apiService.post<void>(`/api/documents/${documentId}/retry`);
 };
 
+export const swapDocumentDates = async (
+    documentId: string
+): Promise<ApiResponse<DocumentItem>> => {
+    return apiService.post<DocumentItem>(`/api/documents/${documentId}/swap-dates`);
+};
+
+export const updateTransactions = async (
+    documentId: string,
+    transactions: any[],
+    currency?: string
+): Promise<ApiResponse<DocumentItem>> => {
+    const body: Record<string, any> = { transactions };
+    if (currency) body.currency = currency;
+    return apiService.patch<DocumentItem>(
+        `/api/documents/${documentId}/transactions`,
+        body
+    );
+};
+
 // =============================================================================
 // Expense Category API
 // =============================================================================
@@ -168,12 +190,14 @@ const documentApi = {
     getDocument,
     deleteDocument,
     updateDocumentFields,
+    updateTransactions,
     reprocessPending,
     getDeletedDocuments,
     restoreDocument,
     permanentDeleteDocuments,
     cancelProcessing,
     retryDocument,
+    swapDocumentDates,
     getExpenseCategories,
     updateExpenseCategories,
     resetExpenseCategories,

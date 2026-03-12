@@ -15,14 +15,14 @@ import CategorySettings from './CategorySettings';
 import SubscriptionTab from './SubscriptionTab';
 import UsageTab from './UsageTab';
 import { TAB_ICONS } from './tabIcons';
+import ConfirmModal from '../../components/common/ConfirmModal';
 import './Settings.scss';
 
 type MsgState = { type: 'success' | 'error'; text: string } | null;
 const hasPasswordFlag = (u: any): boolean => u?.has_password !== undefined ? !!u.has_password : true;
-type TabId = 'profile' | 'security' | 'theme' | 'language' | 'categories' | 'subscription' | 'usage' | 'account';
-
-const TABS: TabId[] = ['profile', 'security', 'theme', 'language', 'categories', 'subscription', 'usage', 'account'];
-
+const isValidEmail = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(value);
+type TabId = 'profile' | 'security' | 'display' | 'categories' | 'subscription' | 'usage' | 'account';
+const TABS: TabId[] = ['profile', 'security', 'display', 'categories', 'subscription', 'usage', 'account'];
 const Settings: React.FC = () => {
     const { t, lang, setLang } = useLang();
     const { user, refreshSession } = useAuth();
@@ -75,11 +75,13 @@ const Settings: React.FC = () => {
     const [pwSaving, setPwSaving] = useState(false);
     const [pwMsg, setPwMsg] = useState<MsgState>(null);
 
+    // Delete account
+    const [deleteConfirm, setDeleteConfirm] = useState(false);
+
     const tabLabelKey: Record<TabId, string> = {
-        profile: 'tabProfile', security: 'tabSecurity', theme: 'tabTheme',
-        language: 'tabLanguage', categories: 'tabCategories',
-        subscription: 'tabSubscription', usage: 'tabUsage',
-        account: 'tabAccount',
+        profile: 'tabProfile', security: 'tabSecurity', display: 'tabDisplay',
+        categories: 'tabCategories', subscription: 'tabSubscription',
+        usage: 'tabUsage', account: 'tabAccount',
     };
 
     const handleProfileSave = useCallback(async () => {
@@ -100,9 +102,8 @@ const Settings: React.FC = () => {
             }
 
             // Save name/email if changed
-            const updates: { name?: string; email?: string } = {};
+            const updates: { name?: string } = {};
             if (name.trim() && name.trim() !== user?.name) updates.name = name.trim();
-            if (email.trim() && email.trim() !== user?.email) updates.email = email.trim();
             if (Object.keys(updates).length) {
                 const res = await authApi.updateProfile(updates);
                 if (!res.success) {
@@ -231,7 +232,7 @@ const Settings: React.FC = () => {
                             </div>
                             <div className="settings__field">
                                 <label className="settings__label">{t('profileEmail')}</label>
-                                <input className="settings__input" type="email" value={email} onChange={e => setEmail(e.target.value)} />
+                                <input className="settings__input" type="email" value={email} readOnly disabled />
                             </div>
                             {profileMsg && <div className={`settings__message settings__message--${profileMsg.type}`}>{profileMsg.text}</div>}
                             <button className="settings__btn settings__btn--primary" onClick={handleProfileSave} disabled={profileSaving || !profileChanged}>
@@ -270,7 +271,7 @@ const Settings: React.FC = () => {
                         </div>
                     </div>
                 );
-            case 'theme': {
+            case 'display': {
                 const themeOptions: { value: Theme; label: string; desc: string; icon: JSX.Element }[] = [
                     {
                         value: 'light', label: t('themeLight'), desc: t('themeLightDesc'),
@@ -306,19 +307,9 @@ const Settings: React.FC = () => {
                                 </button>
                             ))}
                         </div>
-                    </div>
-                );
-            }
-            case 'language':
-                return (
-                    <div className="settings__card">
-                        <h3 className="settings__card-title">{t('languageSection')}</h3>
+                        <h3 className="settings__card-title" style={{ marginTop: 28 }}>{t('languageSection')}</h3>
                         <p className="settings__card-desc">{t('languageDescription')}</p>
                         <div className="settings__lang-options">
-                            <button className={`settings__lang-btn ${lang === 'tr' ? 'settings__lang-btn--active' : ''}`} onClick={() => setLang('tr')}>
-                                <span className="settings__lang-flag">TR</span>
-                                {t('languageTurkish')}
-                            </button>
                             <button className={`settings__lang-btn ${lang === 'en' ? 'settings__lang-btn--active' : ''}`} onClick={() => setLang('en')}>
                                 <span className="settings__lang-flag">EN</span>
                                 {t('languageEnglish')}
@@ -327,35 +318,62 @@ const Settings: React.FC = () => {
                                 <span className="settings__lang-flag">DE</span>
                                 {t('languageGerman')}
                             </button>
+                            <button className={`settings__lang-btn ${lang === 'tr' ? 'settings__lang-btn--active' : ''}`} onClick={() => setLang('tr')}>
+                                <span className="settings__lang-flag">TR</span>
+                                {t('languageTurkish')}
+                            </button>
                         </div>
                     </div>
                 );
+            }
             case 'categories':
                 return <CategorySettings />;
             case 'subscription':
                 return (
-                    <>
+                    <div className="settings__content--subscription">
                         {paymentMsg && <div className={`settings__message settings__message--${paymentMsg.type}`} style={{ marginBottom: 16 }}>{paymentMsg.text}</div>}
                         <SubscriptionTab refreshKey={usageRefreshKey} />
-                    </>
+                    </div>
                 );
             case 'usage':
                 return <UsageTab refreshKey={usageRefreshKey} />;
             case 'account':
                 return (
-                    <div className="settings__card">
-                        <h3 className="settings__card-title">{t('accountSection')}</h3>
-                        <div className="settings__info-grid">
-                            <div className="settings__info-item">
-                                <span className="settings__info-label">{t('accountType')}</span>
-                                <span className="settings__info-value">{t('accountTypeB2C')}</span>
-                            </div>
-                            <div className="settings__info-item">
-                                <span className="settings__info-label">{t('memberId')}</span>
-                                <span className="settings__info-value">{user?.user_id || '-'}</span>
+                    <>
+                        <div className="settings__card">
+                            <h3 className="settings__card-title">{t('accountSection')}</h3>
+                            <div className="settings__info-grid">
+                                <div className="settings__info-item">
+                                    <span className="settings__info-label">{t('accountType')}</span>
+                                    <span className="settings__info-value">{t('accountTypeB2C')}</span>
+                                </div>
+                                <div className="settings__info-item">
+                                    <span className="settings__info-label">{t('memberId')}</span>
+                                    <span className="settings__info-value">{user?.user_id || '-'}</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                        <div className="settings__card settings__card--danger" style={{ marginTop: 20 }}>
+                            <h3 className="settings__card-title">{t('deleteAccountBtn')}</h3>
+                            <p className="settings__card-desc">{t('deleteAccountMessage')}</p>
+                            <button
+                                className="settings__btn settings__btn--danger"
+                                onClick={() => setDeleteConfirm(true)}
+                            >
+                                {t('deleteAccountBtn')}
+                            </button>
+                        </div>
+                        <ConfirmModal
+                            isOpen={deleteConfirm}
+                            title={t('deleteAccountTitle')}
+                            message={t('deleteAccountMessage')}
+                            confirmLabel={t('deleteAccountConfirm')}
+                            cancelLabel={t('deleteAccountCancel')}
+                            variant="danger"
+                            onConfirm={() => setDeleteConfirm(false)}
+                            onCancel={() => setDeleteConfirm(false)}
+                        />
+                    </>
                 );
         }
     };

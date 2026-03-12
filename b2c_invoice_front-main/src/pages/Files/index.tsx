@@ -9,6 +9,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/layout/Layout';
 import { useLang } from '../../shared/i18n';
 import documentApi, { DocumentItem } from '../../services/documentApi';
+import BulkUploadModal from '../InvoiceList/BulkUploadModal';
+import DragDropOverlay from '../../components/common/DragDropOverlay';
 import config from '../../utils/config';
 import './Files.scss';
 
@@ -78,6 +80,13 @@ const Files: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [deleting, setDeleting] = useState(false);
+    const [uploadModalOpen, setUploadModalOpen] = useState(false);
+    const [droppedFiles, setDroppedFiles] = useState<File[] | undefined>(undefined);
+
+    const handleGlobalDrop = useCallback((files: File[]) => {
+        setDroppedFiles(files);
+        setUploadModalOpen(true);
+    }, []);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -125,6 +134,7 @@ const Files: React.FC = () => {
 
     return (
         <Layout pageTitle={t('filesTitle')} pageDescription={t('filesDescription')}>
+            <DragDropOverlay onDrop={handleGlobalDrop} label={t('dropzoneInlineHover')} />
             <div className="files">
                 <div className="files__folders">
                     {FILES_FOLDERS.map(folder => (
@@ -252,6 +262,13 @@ const Files: React.FC = () => {
                     </div>
                 )}
             </div>
+            <BulkUploadModal
+                isOpen={uploadModalOpen}
+                onClose={() => { setUploadModalOpen(false); setDroppedFiles(undefined); }}
+                onUploadComplete={() => { setUploadModalOpen(false); setDroppedFiles(undefined); fetchData(); }}
+                initialFiles={droppedFiles}
+                docType={activeTab}
+            />
         </Layout>
     );
 };

@@ -23,6 +23,7 @@ interface SpendingChartProps {
     loading: boolean;
     displayCurrency: string;
     title?: string;
+    barColor?: string;
 }
 
 const formatShortAmount = (value: number): string => {
@@ -44,11 +45,11 @@ const formatDate = (dateStr: string): string => {
 const formatAmount = (value: number, currency: string): string =>
     value.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + currency;
 
-const SpendingChart: React.FC<SpendingChartProps> = ({ data, loading, displayCurrency, title }) => {
+const SpendingChart: React.FC<SpendingChartProps> = ({ data, loading, displayCurrency, title, barColor: barColorProp }) => {
     const { resolvedTheme } = useTheme();
     const { t } = useLang();
     const isDark = resolvedTheme === 'dark';
-    const barColor = isDark ? '#60a5fa' : '#3b82f6';
+    const barColor = barColorProp || (isDark ? '#60a5fa' : '#3b82f6');
     const gridColor = isDark ? '#3a3a3a' : '#e5e7eb';
     const axisColor = isDark ? '#707070' : '#9ca3af';
 

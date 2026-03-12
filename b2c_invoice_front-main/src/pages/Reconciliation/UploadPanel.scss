@@ -75,6 +75,35 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
+
+        &--compact {
+            .upload-panel__docs-label {
+                font-size: 10px;
+            }
+
+            .upload-panel__doc-list {
+                height: auto;
+                max-height: 120px;
+                gap: 2px;
+            }
+
+            .upload-panel__doc-item {
+                padding: 3px 6px;
+            }
+
+            .upload-panel__doc-name {
+                font-size: 12px;
+            }
+
+            .upload-panel__doc-metric {
+                font-size: 11px;
+            }
+
+            .upload-panel__empty {
+                font-size: 12px;
+                padding: 4px 0;
+            }
+        }
     }
 
     &__docs-label {

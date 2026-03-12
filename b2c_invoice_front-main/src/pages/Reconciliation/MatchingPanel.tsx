@@ -11,7 +11,9 @@ import {
     getTransactions,
     deleteMatch,
     createManualMatch,
+    clearMatchStale,
     RunMatchingParams,
+    ColumnFilters,
 } from '../../services/reconciliationApi';
 import TransactionRow from './TransactionRow';
 import TransactionModal from './TransactionModal';
@@ -25,13 +27,14 @@ interface MatchingPanelProps {
     expenses: DocumentItem[];
     incomes: DocumentItem[];
     onMatchingComplete?: () => void;
+    refreshTrigger?: number;
 }
 
 const PAGE_SIZE = 50;
 type FilterStatus = 'all' | 'matched' | 'unmatched';
 
 const MatchingPanel: React.FC<MatchingPanelProps> = ({
-    hasBankTransactions, expenses, incomes, onMatchingComplete,
+    hasBankTransactions, expenses, incomes, onMatchingComplete, refreshTrigger,
 }) => {
     const { t, lang } = useLang();
 
@@ -50,16 +53,37 @@ const MatchingPanel: React.FC<MatchingPanelProps> = ({
     const [showRematchModal, setShowRematchModal] = useState(false);
     const [rematchTxs, setRematchTxs] = useState<UnifiedTransaction[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [columnFilters, setColumnFilters] = useState<ColumnFilters>({});
+    const [debouncedFilters, setDebouncedFilters] = useState<ColumnFilters>({});
+
+    // Debounce search query (300ms) and reset page
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+            setPage(1);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // Debounce column filters (400ms)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedFilters(columnFilters);
+            setPage(1);
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [columnFilters]);
 
     // Draggable column divider (default 50% = aligned with upload panels)
     const [splitPct, setSplitPct] = useState(50);
     const draggingRef = useRef(false);
     const tableWrapRef = useRef<HTMLDivElement>(null);
 
-    const fetchTransactions = useCallback(async (p = 1, filter: FilterStatus = 'all') => {
+    const fetchTransactions = useCallback(async (p = 1, filter: FilterStatus = 'all', search = '', colFilters?: ColumnFilters) => {
         setLoading(true);
         try {
-            const res = await getTransactions(p, PAGE_SIZE, filter);
+            const res = await getTransactions(p, PAGE_SIZE, filter, search, colFilters);
             if (res.success && res.data) {
                 setTransactions(res.data.transactions);
                 setTotal(res.data.total);
@@ -76,14 +100,23 @@ const MatchingPanel: React.FC<MatchingPanelProps> = ({
     const { startPolling } = useMatchingStatus({
         setMatching,
         onComplete: useCallback(() => {
-            fetchTransactions(1, filterStatus);
+            fetchTransactions(1, filterStatus, debouncedSearch, debouncedFilters);
             onMatchingComplete?.();
-        }, [fetchTransactions, filterStatus, onMatchingComplete]),
+        }, [fetchTransactions, filterStatus, debouncedSearch, debouncedFilters, onMatchingComplete]),
     });
 
     useEffect(() => {
-        fetchTransactions(page, filterStatus);
-    }, [fetchTransactions, page, filterStatus]);
+        fetchTransactions(page, filterStatus, debouncedSearch, debouncedFilters);
+    }, [fetchTransactions, page, filterStatus, debouncedSearch, debouncedFilters]);
+
+    // Re-fetch when parent triggers a refresh (e.g. after upload)
+    const refreshTriggerRef = useRef(refreshTrigger);
+    useEffect(() => {
+        if (refreshTrigger !== refreshTriggerRef.current && refreshTrigger && refreshTrigger > 0) {
+            refreshTriggerRef.current = refreshTrigger;
+            fetchTransactions(1, filterStatus, debouncedSearch, debouncedFilters);
+        }
+    }, [refreshTrigger, fetchTransactions, filterStatus, debouncedSearch, debouncedFilters]);
 
     const handleRunMatching = useCallback(async (params: RunMatchingParams = {}) => {
         setMatching(true);
@@ -94,7 +127,7 @@ const MatchingPanel: React.FC<MatchingPanelProps> = ({
             const res = await runMatching({ ...params, language: lang });
             if (res.success) {
                 setPage(1);
-                await fetchTransactions(1, filterStatus);
+                await fetchTransactions(1, filterStatus, debouncedSearch, debouncedFilters);
                 onMatchingComplete?.();
                 setMatching(false);
             } else {
@@ -110,7 +143,7 @@ const MatchingPanel: React.FC<MatchingPanelProps> = ({
             setError(t('matchingFailed'));
             setMatching(false);
         }
-    }, [fetchTransactions, filterStatus, onMatchingComplete, t, lang, startPolling]);
+    }, [fetchTransactions, filterStatus, debouncedSearch, debouncedFilters, onMatchingComplete, t, lang, startPolling]);
 
     const handleOpenRematchModal = useCallback(async () => {
         setShowRematchOptions(false);
@@ -136,9 +169,16 @@ const MatchingPanel: React.FC<MatchingPanelProps> = ({
         if (res.success) {
             setDetailTx(null);
             setUnlinkMatchId(null);
-            await fetchTransactions(page, filterStatus);
+            await fetchTransactions(page, filterStatus, debouncedSearch, debouncedFilters);
         }
-    }, [unlinkMatchId, fetchTransactions, page, filterStatus]);
+    }, [unlinkMatchId, fetchTransactions, page, filterStatus, debouncedSearch, debouncedFilters]);
+
+    const handleClearStale = useCallback(async (matchId: string) => {
+        const res = await clearMatchStale(matchId);
+        if (res.success) {
+            await fetchTransactions(page, filterStatus, debouncedSearch, debouncedFilters);
+        }
+    }, [fetchTransactions, page, filterStatus, debouncedSearch, debouncedFilters]);
 
     const handleLinkInModal = useCallback(async (documentId: string): Promise<boolean> => {
         if (!detailTx) return false;
@@ -146,9 +186,9 @@ const MatchingPanel: React.FC<MatchingPanelProps> = ({
             detailTx.statement_id, detailTx.tx_index, documentId,
         );
         if (res.success) {
-            await fetchTransactions(page, filterStatus);
+            await fetchTransactions(page, filterStatus, debouncedSearch, debouncedFilters);
             // Refresh detailTx with updated matches
-            const refreshRes = await getTransactions(page, PAGE_SIZE, filterStatus);
+            const refreshRes = await getTransactions(page, PAGE_SIZE, filterStatus, debouncedSearch, debouncedFilters);
             if (refreshRes.success && refreshRes.data) {
                 const updated = refreshRes.data.transactions.find(
                     t => t.statement_id === detailTx.statement_id && t.tx_index === detailTx.tx_index,
@@ -158,11 +198,23 @@ const MatchingPanel: React.FC<MatchingPanelProps> = ({
             return true;
         }
         return false;
-    }, [detailTx, fetchTransactions, page, filterStatus]);
+    }, [detailTx, fetchTransactions, page, filterStatus, debouncedSearch, debouncedFilters]);
 
     const handleFilterChange = useCallback((f: FilterStatus) => {
         setFilterStatus(f);
         setPage(1);
+    }, []);
+
+    const updateColumnFilter = useCallback((key: string, value: string) => {
+        setColumnFilters(prev => {
+            const next = { ...prev };
+            if (!value) {
+                delete next[key];
+            } else {
+                next[key] = value;
+            }
+            return next;
+        });
     }, []);
 
     // Divider drag handlers
@@ -207,9 +259,9 @@ const MatchingPanel: React.FC<MatchingPanelProps> = ({
     const handleUnlinkInModal = useCallback(async (matchId: string) => {
         const res = await deleteMatch(matchId);
         if (res.success) {
-            await fetchTransactions(page, filterStatus);
+            await fetchTransactions(page, filterStatus, debouncedSearch, debouncedFilters);
             if (detailTx) {
-                const refreshRes = await getTransactions(page, PAGE_SIZE, filterStatus);
+                const refreshRes = await getTransactions(page, PAGE_SIZE, filterStatus, debouncedSearch, debouncedFilters);
                 if (refreshRes.success && refreshRes.data) {
                     const updated = refreshRes.data.transactions.find(
                         t => t.statement_id === detailTx.statement_id && t.tx_index === detailTx.tx_index,
@@ -218,7 +270,7 @@ const MatchingPanel: React.FC<MatchingPanelProps> = ({
                 }
             }
         }
-    }, [fetchTransactions, page, filterStatus, detailTx]);
+    }, [fetchTransactions, page, filterStatus, debouncedSearch, debouncedFilters, detailTx]);
 
     // Collect all document IDs already linked to any transaction
     const linkedDocIds = useMemo(() => {
@@ -230,20 +282,6 @@ const MatchingPanel: React.FC<MatchingPanelProps> = ({
         }
         return ids;
     }, [transactions]);
-
-    const filteredTransactions = useMemo(() => {
-        if (!searchQuery.trim()) return transactions;
-        const q = searchQuery.toLowerCase().trim();
-        return transactions.filter(tx =>
-            (tx.description || '').toLowerCase().includes(q) ||
-            (tx.bank_name || '').toLowerCase().includes(q) ||
-            (tx.date || '').includes(q) ||
-            (tx.matches || []).some(m =>
-                (m.document_ref?.filename || '').toLowerCase().includes(q) ||
-                (m.document_ref?.vendor_name || '').toLowerCase().includes(q)
-            )
-        );
-    }, [transactions, searchQuery]);
 
     const totalPages = Math.ceil(total / PAGE_SIZE);
     const hasExisting = summary.matched > 0;
@@ -344,11 +382,6 @@ const MatchingPanel: React.FC<MatchingPanelProps> = ({
                 <div className="matching-panel__loading">
                     <div className="reconciliation-page__spinner" />
                 </div>
-            ) : transactions.length === 0 && loaded ? (
-                <div className="matching-panel__empty-state">
-                    <p className="matching-panel__empty-text">{t('noMatchesYet')}</p>
-                    <p className="matching-panel__empty-hint">{t('noMatchesHint')}</p>
-                </div>
             ) : (
                 <>
                     <div className="matching-panel__table-wrap" ref={tableWrapRef}>
@@ -372,15 +405,79 @@ const MatchingPanel: React.FC<MatchingPanelProps> = ({
                                     <th className="matching-col--status">{t('colConfidence')}</th>
                                     <th className="matching-col--actions"></th>
                                 </tr>
+                                <tr className="matching-panel__filter-row">
+                                    <th>
+                                        <input
+                                            type="text"
+                                            placeholder={`${t('colDate')}...`}
+                                            value={columnFilters.date || ''}
+                                            onChange={e => updateColumnFilter('date', e.target.value)}
+                                            className="column-filter-input"
+                                            onClick={e => e.stopPropagation()}
+                                        />
+                                    </th>
+                                    <th>
+                                        <input
+                                            type="text"
+                                            placeholder={`${t('colDescription')}...`}
+                                            value={columnFilters.description || ''}
+                                            onChange={e => updateColumnFilter('description', e.target.value)}
+                                            className="column-filter-input"
+                                            onClick={e => e.stopPropagation()}
+                                        />
+                                    </th>
+                                    <th>
+                                        <input
+                                            type="text"
+                                            placeholder={`${t('colType')}...`}
+                                            value={columnFilters.type || ''}
+                                            onChange={e => updateColumnFilter('type', e.target.value)}
+                                            className="column-filter-input"
+                                            onClick={e => e.stopPropagation()}
+                                        />
+                                    </th>
+                                    <th>
+                                        <input
+                                            type="text"
+                                            placeholder={`${t('colAmount')}...`}
+                                            value={columnFilters.amount || ''}
+                                            onChange={e => updateColumnFilter('amount', e.target.value)}
+                                            className="column-filter-input"
+                                            onClick={e => e.stopPropagation()}
+                                        />
+                                    </th>
+                                    <th>
+                                        <input
+                                            type="text"
+                                            placeholder={`${t('colMatch')}...`}
+                                            value={columnFilters.match_doc || ''}
+                                            onChange={e => updateColumnFilter('match_doc', e.target.value)}
+                                            className="column-filter-input"
+                                            onClick={e => e.stopPropagation()}
+                                        />
+                                    </th>
+                                    <th>
+                                        <input
+                                            type="text"
+                                            placeholder={`${t('colConfidence')}...`}
+                                            value={columnFilters.confidence || ''}
+                                            onChange={e => updateColumnFilter('confidence', e.target.value)}
+                                            className="column-filter-input"
+                                            onClick={e => e.stopPropagation()}
+                                        />
+                                    </th>
+                                    <th>{/* no filter for actions */}</th>
+                                </tr>
                             </thead>
                             <tbody>
-                                {filteredTransactions.map(tx => (
+                                {transactions.map(tx => (
                                     <TransactionRow
                                         key={`${tx.statement_id}-${tx.tx_index}`}
                                         tx={tx}
                                         onOpenDetail={setDetailTx}
                                         onLink={setDetailTx}
                                         onUnlink={handleUnlinkRequest}
+                                        onClearStale={handleClearStale}
                                     />
                                 ))}
                             </tbody>

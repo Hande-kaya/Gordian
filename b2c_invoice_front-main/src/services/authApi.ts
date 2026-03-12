@@ -79,7 +79,8 @@ export const authApi = {
 
     microsoftLogin: async (): Promise<AuthResponse> => {
         try {
-            const response = await fetch(`${config.API_URL}/api/auth/microsoft/login`, {
+            const origin = encodeURIComponent(window.location.origin);
+            const response = await fetch(`${config.API_URL}/api/auth/microsoft/login?origin=${origin}`, {
                 credentials: 'include',
             });
             return await response.json();
@@ -97,7 +98,8 @@ export const authApi = {
 
     googleLogin: async (): Promise<AuthResponse> => {
         try {
-            const response = await fetch(`${config.API_URL}/api/auth/google/login`, {
+            const origin = encodeURIComponent(window.location.origin);
+            const response = await fetch(`${config.API_URL}/api/auth/google/login?origin=${origin}`, {
                 credentials: 'include',
             });
             return await response.json();

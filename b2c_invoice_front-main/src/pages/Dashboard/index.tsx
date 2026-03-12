@@ -9,13 +9,13 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Layout from '../../components/layout/Layout';
 import { useLang } from '../../shared/i18n';
 import { useDashboardStats } from '../../hooks/useDashboardStats';
+import { useBankDashboardStats } from '../../hooks/useBankDashboardStats';
 import { useCategories } from '../../context/CategoryContext';
 import { DISPLAY_CURRENCIES, getPreferredCurrency, setPreferredCurrency } from '../../utils/currency';
 import { CurrencySpending } from '../../services/statsApi';
-import PeriodSelector from './components/PeriodSelector';
-import ChartFilters from './components/CurrencyFilter';
 import SpendingChart from './components/SpendingChart';
 import CategoryChartsGrid from './components/CategoryChartsGrid';
+import BankPieChartsGrid from './components/BankPieChartsGrid';
 import './Dashboard.scss';
 
 /** Convert "YYYY-MM" to "YYYY-MM-DD" (first day of month) */
@@ -29,12 +29,18 @@ const monthToEndDate = (ym: string): string => {
 };
 
 const PERIOD_TO_GROUP: Record<string, string> = {
-    '7d': 'day',
     '30d': 'day',
     '90d': 'month',
     '1y': 'year',
-    'all': 'month',
 };
+
+const PRESET_CHIPS = [
+    { label: '1M', value: '30d' },
+    { label: '3M', value: '90d' },
+    { label: '1Y', value: '1y' },
+];
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const formatCategoryKey = (key: string): string =>
     key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -42,33 +48,49 @@ const formatCategoryKey = (key: string): string =>
 const Dashboard: React.FC = () => {
     const { t } = useLang();
     const { getLabelByKey } = useCategories();
-    const [docType, setDocType] = useState<'invoice' | 'income'>('invoice');
-    const [period, setPeriod] = useState('all');
+
+    // ── View mode toggle ────────────────────────────────────────────────────
+    const [viewMode, setViewMode] = useState<'invoices' | 'bank_statements'>('invoices');
+
+    // ── Period state ──────────────────────────────────────────────────────────
+    const [period, setPeriod] = useState('90d');
+    const [customDateRange, setCustomDateRange] = useState(false);
     const [startMonth, setStartMonth] = useState('');
     const [endMonth, setEndMonth] = useState('');
+    const rangeInitialized = useRef(false);
+
+    // ── Currency state ────────────────────────────────────────────────────────
     const [displayCurrency, setDisplayCurrency] = useState(getPreferredCurrency);
     const [selectedCurrencies, setSelectedCurrencies] = useState<Set<string>>(new Set());
+
+    // ── Category state ────────────────────────────────────────────────────────
     const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-    const rangeInitialized = useRef(false);
-    const customDateRange = useRef(false);
 
-    // Determine what to send to API
+    // ── API params ────────────────────────────────────────────────────────────
     const isPreset = period !== 'all';
-    const groupBy = useMemo(() => PERIOD_TO_GROUP[period] || 'day', [period]);
+    const groupBy = useMemo(() => PERIOD_TO_GROUP[period] || 'month', [period]);
+    const apiStartDate = !isPreset && customDateRange && startMonth ? monthToStartDate(startMonth) : undefined;
+    const apiEndDate   = !isPreset && customDateRange && endMonth   ? monthToEndDate(endMonth)     : undefined;
 
-    // Only send dates when user explicitly picked months (not auto-initialized)
-    const apiStartDate = !isPreset && customDateRange.current && startMonth ? monthToStartDate(startMonth) : undefined;
-    const apiEndDate = !isPreset && customDateRange.current && endMonth ? monthToEndDate(endMonth) : undefined;
-
+    // ── Data fetching ─────────────────────────────────────────────────────────
     const { data, loading } = useDashboardStats(
-        isPreset ? period : 'all',
+        isPreset ? period : 'all', groupBy, apiStartDate, apiEndDate, 'invoice',
+    );
+    const { data: incomeData, loading: incomeLoading } = useDashboardStats(
+        isPreset ? period : 'all', groupBy, apiStartDate, apiEndDate, 'income',
+    );
+
+    // ── Bank dashboard data (lazy — only fetched in bank_statements mode) ────
+    const bankData = useBankDashboardStats(
+        viewMode === 'bank_statements' ? (isPreset ? period : 'all') : null,
         groupBy,
         apiStartDate,
         apiEndDate,
-        docType,
+        t('bankMatched'),
+        t('bankUnmatched'),
     );
 
-    // Initialize month dropdowns from API date_range on first load
+    // ── Init date range from API ──────────────────────────────────────────────
     useEffect(() => {
         if (rangeInitialized.current || !data?.date_range) return;
         const { min_month, max_month } = data.date_range;
@@ -79,18 +101,20 @@ const Dashboard: React.FC = () => {
         }
     }, [data?.date_range]);
 
-    // Extract unique currencies & categories from data
+    // ── Derived lists ─────────────────────────────────────────────────────────
     const availableCurrencies = useMemo(() => {
-        if (!data?.spending_by_date) return [];
-        return Array.from(new Set(data.spending_by_date.map(cs => cs.currency))).sort();
-    }, [data?.spending_by_date]);
+        if (viewMode === 'bank_statements') return bankData.availableCurrencies;
+        return Array.from(new Set(data?.spending_by_date?.map(cs => cs.currency) ?? [])).sort();
+    }, [viewMode, data?.spending_by_date, bankData.availableCurrencies]);
 
     const availableCategories = useMemo(() => {
-        if (!data?.spending_by_category) return [];
-        return Array.from(new Set(data.spending_by_category.map(cs => cs.category))).sort();
+        const cats = Array.from(new Set(data?.spending_by_category?.map(cs => cs.category) ?? [])).sort();
+        const otherIndex = cats.findIndex(c => c.toLowerCase() === 'other');
+        if (otherIndex !== -1) cats.push(cats.splice(otherIndex, 1)[0]);
+        return cats;
     }, [data?.spending_by_category]);
 
-    // Auto-select new currencies/categories when data changes
+    // ── Auto-select currencies / categories when data changes ─────────────────
     useEffect(() => {
         if (!availableCurrencies.length) return;
         setSelectedCurrencies(prev => {
@@ -111,7 +135,7 @@ const Dashboard: React.FC = () => {
         });
     }, [availableCategories]);
 
-    // Filtered category data (currency + category filters)
+    // ── Filtered data ─────────────────────────────────────────────────────────
     const filteredSpendingByCategory = useMemo(
         () => (data?.spending_by_category ?? []).filter(
             cs => selectedCurrencies.has(cs.currency) && selectedCategories.has(cs.category),
@@ -119,8 +143,6 @@ const Dashboard: React.FC = () => {
         [data?.spending_by_category, selectedCurrencies, selectedCategories],
     );
 
-    // Filtered spending-by-date: when all categories selected use original data,
-    // otherwise reconstruct from filtered category data
     const filteredSpendingByDate = useMemo((): CurrencySpending[] => {
         const allCatsSelected = availableCategories.length > 0
             && availableCategories.every(c => selectedCategories.has(c));
@@ -129,7 +151,6 @@ const Dashboard: React.FC = () => {
             return (data?.spending_by_date ?? []).filter(cs => selectedCurrencies.has(cs.currency));
         }
 
-        // Rebuild per-currency totals from filtered category time_series
         const map = new Map<string, Map<string, { total: number; count: number }>>();
         for (const cs of filteredSpendingByCategory) {
             if (!map.has(cs.currency)) map.set(cs.currency, new Map());
@@ -153,12 +174,64 @@ const Dashboard: React.FC = () => {
         return result;
     }, [data?.spending_by_date, filteredSpendingByCategory, availableCategories, selectedCurrencies, selectedCategories]);
 
-    const handleCurrencyToggle = (currency: string) => {
+    const incomeSpendingByDate = useMemo((): CurrencySpending[] =>
+        (incomeData?.spending_by_date ?? []).filter(cs => selectedCurrencies.has(cs.currency)),
+    [incomeData?.spending_by_date, selectedCurrencies]);
+
+    // ── Bank: currency-filtered chart data ──────────────────────────────────
+    const filteredBankDebits = useMemo((): CurrencySpending[] =>
+        bankData.debitsByDate.filter(cs => selectedCurrencies.has(cs.currency)),
+    [bankData.debitsByDate, selectedCurrencies]);
+
+    const filteredBankCredits = useMemo((): CurrencySpending[] =>
+        bankData.creditsByDate.filter(cs => selectedCurrencies.has(cs.currency)),
+    [bankData.creditsByDate, selectedCurrencies]);
+
+    // ── Handlers ──────────────────────────────────────────────────────────────
+    const allCurrenciesSelected = availableCurrencies.length > 0
+        && availableCurrencies.every(c => selectedCurrencies.has(c));
+
+    const handleCurrencyChipClick = (currency: string) => {
         setSelectedCurrencies(prev => {
             const next = new Set(prev);
-            if (next.has(currency)) next.delete(currency); else next.add(currency);
+            if (next.has(currency)) {
+                next.delete(currency);
+            } else {
+                next.add(currency);
+            }
             return next;
         });
+    };
+
+    const handlePresetClick = (value: string) => {
+        setPeriod(value);
+        setCustomDateRange(false);
+    };
+
+    const handleStartMonthChange = (m: string) => {
+        setPeriod('all');
+        setCustomDateRange(true);
+        if (endMonth && m >= endMonth) {
+            // clamp: push endMonth to one month after new start
+            const [y, mo] = m.split('-').map(Number);
+            const nextMo = mo === 12 ? 1 : mo + 1;
+            const nextY = mo === 12 ? y + 1 : y;
+            setEndMonth(`${nextY}-${String(nextMo).padStart(2, '0')}`);
+        }
+        setStartMonth(m);
+    };
+
+    const handleEndMonthChange = (m: string) => {
+        setPeriod('all');
+        setCustomDateRange(true);
+        if (startMonth && m <= startMonth) {
+            // clamp: push startMonth to one month before new end
+            const [y, mo] = m.split('-').map(Number);
+            const prevMo = mo === 1 ? 12 : mo - 1;
+            const prevY = mo === 1 ? y - 1 : y;
+            setStartMonth(`${prevY}-${String(prevMo).padStart(2, '0')}`);
+        }
+        setEndMonth(m);
     };
 
     const handleCategoryToggle = (category: string) => {
@@ -169,86 +242,156 @@ const Dashboard: React.FC = () => {
         });
     };
 
-    const handlePeriodChange = (value: string) => {
-        setPeriod(value);
-        customDateRange.current = false;
-        if (value === 'all' && data?.date_range) {
-            const { min_month, max_month } = data.date_range;
-            if (min_month) setStartMonth(min_month);
-            if (max_month) setEndMonth(max_month);
-        }
-    };
-
-    const handleStartMonthChange = (m: string) => { setStartMonth(m); setPeriod('all'); customDateRange.current = true; };
-    const handleEndMonthChange = (m: string) => { setEndMonth(m); setPeriod('all'); customDateRange.current = true; };
-
-    const handleDocTypeChange = (type: 'invoice' | 'income') => {
-        setDocType(type);
-        setStartMonth('');
-        setEndMonth('');
-        rangeInitialized.current = false;
-        customDateRange.current = false;
-    };
-
-    const handleCurrencyChange = (cur: string) => {
+    const handleDisplayCurrencyChange = (cur: string) => {
         setDisplayCurrency(cur);
         setPreferredCurrency(cur);
     };
+
+    // ── Year options for custom picker ────────────────────────────────────────
+    const pickerYears = useMemo(() => {
+        const now = new Date();
+        const minY = data?.date_range?.min_month
+            ? parseInt(data.date_range.min_month.split('-')[0]) : now.getFullYear() - 2;
+        const maxY = data?.date_range?.max_month
+            ? parseInt(data.date_range.max_month.split('-')[0]) : now.getFullYear();
+        const years: number[] = [];
+        for (let y = minY; y <= maxY; y++) years.push(y);
+        return years;
+    }, [data?.date_range]);
 
     return (
         <Layout
             pageTitle={t('dashboardTitle')}
             pageDescription={t('dashboardDescription')}
-            headerActions={
-                <div className="currency-selector">
-                    <label className="currency-selector__label">{t('displayCurrency')}</label>
-                    <select
-                        className="currency-selector__select"
-                        value={displayCurrency}
-                        onChange={e => handleCurrencyChange(e.target.value)}
-                    >
-                        {DISPLAY_CURRENCIES.map(c => (
-                            <option key={c} value={c}>{c}</option>
-                        ))}
-                    </select>
-                </div>
-            }
         >
             <div className="dashboard">
-                <div className="dashboard__toolbar">
-                    <div className="dashboard__doc-type-toggle">
-                        <button
-                            className={`dashboard__doc-type-btn ${docType === 'invoice' ? 'dashboard__doc-type-btn--active dashboard__doc-type-btn--expense' : ''}`}
-                            onClick={() => handleDocTypeChange('invoice')}
-                        >
-                            {t('dashboardExpenses')}
-                        </button>
-                        <button
-                            className={`dashboard__doc-type-btn ${docType === 'income' ? 'dashboard__doc-type-btn--active dashboard__doc-type-btn--income' : ''}`}
-                            onClick={() => handleDocTypeChange('income')}
-                        >
-                            {t('dashboardIncome')}
-                        </button>
-                    </div>
-                    <PeriodSelector
-                        period={period}
-                        onPeriodChange={handlePeriodChange}
-                        startMonth={startMonth}
-                        endMonth={endMonth}
-                        onStartMonthChange={handleStartMonthChange}
-                        onEndMonthChange={handleEndMonthChange}
-                        minMonth={data?.date_range?.min_month ?? null}
-                        maxMonth={data?.date_range?.max_month ?? null}
-                    />
 
-                    <ChartFilters
-                        currencies={availableCurrencies}
-                        selectedCurrencies={selectedCurrencies}
-                        onToggleCurrency={handleCurrencyToggle}
-                    />
+                {/* ── View Mode Toggle ────────────────────────────────────── */}
+                <div className="dashboard__doc-type-toggle">
+                    <button
+                        className={`dashboard__doc-type-btn ${viewMode === 'invoices' ? 'dashboard__doc-type-btn--active' : ''}`}
+                        onClick={() => setViewMode('invoices')}
+                    >
+                        {t('dashboardInvoices')}
+                    </button>
+                    <button
+                        className={`dashboard__doc-type-btn ${viewMode === 'bank_statements' ? 'dashboard__doc-type-btn--active' : ''}`}
+                        onClick={() => setViewMode('bank_statements')}
+                    >
+                        {t('navBankStatements')}
+                    </button>
                 </div>
 
-                {availableCategories.length > 1 && (
+                {/* ── Toolbar ─────────────────────────────────────────────── */}
+                <div className="dashboard__toolbar-v2">
+
+                    {/* LEFT: Currency controls */}
+                    <div className="dashboard__toolbar-group">
+                        <div className="dashboard__toolbar-row">
+                            <span className="dashboard__toolbar-label">{t('showValuesIn')}</span>
+                            <select
+                                className="dashboard__display-currency-select"
+                                value={displayCurrency}
+                                onChange={e => handleDisplayCurrencyChange(e.target.value)}
+                            >
+                                {DISPLAY_CURRENCIES.map(c => (
+                                    <option key={c} value={c}>{c}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {availableCurrencies.length > 0 && (
+                            <div className="dashboard__toolbar-row">
+                                <span className="dashboard__toolbar-label">{t('transactionCurrency')}</span>
+                                <div className="dashboard__chip-group">
+                                    <button
+                                        className={`dashboard__chip ${allCurrenciesSelected ? 'dashboard__chip--active' : ''}`}
+                                        onClick={() => setSelectedCurrencies(new Set(availableCurrencies))}
+                                    >
+                                        {t('selectAll')}
+                                    </button>
+                                    {availableCurrencies.map(c => (
+                                        <button
+                                            key={c}
+                                            className={`dashboard__chip ${selectedCurrencies.has(c) ? 'dashboard__chip--active' : ''}`}
+                                            onClick={() => handleCurrencyChipClick(c)}
+                                        >
+                                            {c}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* RIGHT: Time controls */}
+                    <div className="dashboard__toolbar-group dashboard__toolbar-group--right">
+
+                        <div className="dashboard__toolbar-row">
+                            <span className="dashboard__toolbar-label">{t('dateRanges')}</span>
+                            <div className="dashboard__period-group">
+                                {PRESET_CHIPS.map(chip => (
+                                    <button
+                                        key={chip.value}
+                                        className={`dashboard__period-btn ${period === chip.value && !customDateRange ? 'dashboard__period-btn--active' : ''}`}
+                                        onClick={() => handlePresetClick(chip.value)}
+                                    >
+                                        {chip.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="dashboard__toolbar-row">
+                            <span className="dashboard__custom-popover-label">{t('periodFrom')}</span>
+                            <select
+                                className="dashboard__custom-popover-select"
+                                value={startMonth.split('-')[1] ? parseInt(startMonth.split('-')[1]) - 1 : 0}
+                                onChange={e => {
+                                    const y = startMonth.split('-')[0] || String(new Date().getFullYear());
+                                    handleStartMonthChange(`${y}-${String(parseInt(e.target.value) + 1).padStart(2, '0')}`);
+                                }}
+                            >
+                                {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                            </select>
+                            <select
+                                className="dashboard__custom-popover-select"
+                                value={startMonth.split('-')[0] || new Date().getFullYear()}
+                                onChange={e => {
+                                    const mo = startMonth.split('-')[1] || '01';
+                                    handleStartMonthChange(`${e.target.value}-${mo}`);
+                                }}
+                            >
+                                {pickerYears.map(y => <option key={y} value={y}>{y}</option>)}
+                            </select>
+                            <span className="dashboard__custom-popover-label">{t('periodTo')}</span>
+                            <select
+                                className="dashboard__custom-popover-select"
+                                value={endMonth.split('-')[1] ? parseInt(endMonth.split('-')[1]) - 1 : 0}
+                                onChange={e => {
+                                    const y = endMonth.split('-')[0] || String(new Date().getFullYear());
+                                    handleEndMonthChange(`${y}-${String(parseInt(e.target.value) + 1).padStart(2, '0')}`);
+                                }}
+                            >
+                                {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                            </select>
+                            <select
+                                className="dashboard__custom-popover-select"
+                                value={endMonth.split('-')[0] || new Date().getFullYear()}
+                                onChange={e => {
+                                    const mo = endMonth.split('-')[1] || '01';
+                                    handleEndMonthChange(`${e.target.value}-${mo}`);
+                                }}
+                            >
+                                {pickerYears.map(y => <option key={y} value={y}>{y}</option>)}
+                            </select>
+                        </div>
+
+                    </div>
+                </div>
+
+                {/* ── Category chips (invoices only) ────────────────────── */}
+                {viewMode === 'invoices' && availableCategories.length > 1 && (
                     <div className="dashboard__category-chips">
                         {availableCategories.map(cat => (
                             <button
@@ -268,28 +411,98 @@ const Dashboard: React.FC = () => {
                     </div>
                 )}
 
-                <div data-tutorial="charts">
-                    <SpendingChart
-                        data={filteredSpendingByDate}
-                        loading={loading}
-                        displayCurrency={displayCurrency}
-                        title={docType === 'income' ? t('totalIncome') : undefined}
-                    />
-                </div>
+                {/* ── Invoices Charts ─────────────────────────────────────── */}
+                {viewMode === 'invoices' && (
+                    <>
+                        <div data-tutorial="charts">
+                            <SpendingChart
+                                data={filteredSpendingByDate}
+                                loading={loading}
+                                displayCurrency={displayCurrency}
+                                title={t('totalSpending')}
+                            />
+                        </div>
 
-                <CategoryChartsGrid categories={filteredSpendingByCategory} loading={loading} displayCurrency={displayCurrency} />
+                        <SpendingChart
+                            data={incomeSpendingByDate}
+                            loading={incomeLoading}
+                            displayCurrency={displayCurrency}
+                            title={t('totalIncome')}
+                        />
 
-                <div className="dashboard__section">
-                    <h3 className="dashboard__section-title">{t('quickActions')}</h3>
-                    <div className="dashboard__actions">
-                        <a href="/invoices" className="dashboard__action-card">
-                            <div className="dashboard__action-content">
-                                <h4>{t('expensesAction')}</h4>
-                                <p>{t('expensesActionDesc')}</p>
+                        <CategoryChartsGrid
+                            categories={filteredSpendingByCategory}
+                            loading={loading}
+                            displayCurrency={displayCurrency}
+                        />
+                    </>
+                )}
+
+                {/* ── Bank Statements Charts ──────────────────────────────── */}
+                {viewMode === 'bank_statements' && (
+                    <>
+                        {/* Summary cards */}
+                        <div className="dashboard__bank-summary">
+                            <div className="dashboard__stat-card dashboard__stat-card--total">
+                                <div>
+                                    <div className="dashboard__stat-value">{bankData.summary.totalTransactions}</div>
+                                    <div className="dashboard__stat-label">{t('bankTotalTransactions')}</div>
+                                </div>
                             </div>
-                        </a>
-                    </div>
-                </div>
+                            <div className="dashboard__stat-card dashboard__stat-card--discrepancy">
+                                <div>
+                                    <div className="dashboard__stat-value">
+                                        {bankData.summary.totalDebits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </div>
+                                    <div className="dashboard__stat-label">{t('bankTotalDebits')}</div>
+                                </div>
+                            </div>
+                            <div className="dashboard__stat-card dashboard__stat-card--matched">
+                                <div>
+                                    <div className="dashboard__stat-value">
+                                        {bankData.summary.totalCredits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </div>
+                                    <div className="dashboard__stat-label">{t('bankTotalCredits')}</div>
+                                </div>
+                            </div>
+                            <div className="dashboard__stat-card dashboard__stat-card--pending">
+                                <div>
+                                    <div className="dashboard__stat-value">
+                                        {bankData.summary.totalTransactions > 0
+                                            ? `${((bankData.summary.matchedCount / bankData.summary.totalTransactions) * 100).toFixed(1)}%`
+                                            : '—'}
+                                    </div>
+                                    <div className="dashboard__stat-label">{t('bankMatchRate')}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Bar charts: debits (red) and credits (green) */}
+                        <SpendingChart
+                            data={filteredBankDebits}
+                            loading={bankData.loading}
+                            displayCurrency={displayCurrency}
+                            title={t('bankTotalDebits')}
+                            barColor="#ef4444"
+                        />
+                        <SpendingChart
+                            data={filteredBankCredits}
+                            loading={bankData.loading}
+                            displayCurrency={displayCurrency}
+                            title={t('bankTotalCredits')}
+                            barColor="#10b981"
+                        />
+
+                        {/* Pie charts: by bank + match status */}
+                        <BankPieChartsGrid
+                            bankBreakdown={bankData.bankBreakdown}
+                            matchStatus={bankData.matchStatus}
+                            transactions={bankData.transactions}
+                            displayCurrency={displayCurrency}
+                            loading={bankData.loading}
+                        />
+                    </>
+                )}
             </div>
         </Layout>
     );

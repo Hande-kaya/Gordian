@@ -306,3 +306,25 @@ $green-50: #ecfdf5;
         &__billing-amount-row { flex-direction: column; }
     }
 }
+
+.settings__content--subscription {
+    overflow-y: auto;
+    max-height: calc(100vh - 160px);
+
+    &::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb);
+        border-radius: 4px;
+
+        &:hover {
+            background: var(--text-muted);
+        }
+    }
+}

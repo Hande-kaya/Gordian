@@ -94,5 +94,6 @@ $transition-slow: 0.3s ease;
 // Z-index
 $z-sidebar: 1000;
 $z-header: 100;
-$z-modal: 2000;
-$z-tooltip: 3000;
+$z-modal: 10001;
+$z-tooltip: 10002;
+$z-drag-overlay: 10000;

@@ -200,6 +200,23 @@ const InvoiceDetail: React.FC = () => {
         }
     }, [id, values, originalValues, lineItems, originalLineItems]);
 
+    const hasDateFormat = !!doc?.extracted_data?.date_format;
+
+    const handleSwapDates = useCallback(async () => {
+        if (!id) return;
+        try {
+            const res = await documentApi.swapDocumentDates(id);
+            if (res.success && res.data) {
+                setDoc(res.data);
+                const flat = flattenDoc(res.data);
+                setValues(flat);
+                setOriginalValues(flat);
+            }
+        } catch {
+            // silent fail
+        }
+    }, [id]);
+
     const handleDeleteConfirm = useCallback(async () => {
         if (!id) return;
         setShowDeleteModal(false);
@@ -343,7 +360,22 @@ const InvoiceDetail: React.FC = () => {
                     </div>
 
                     <div className="invoice-detail__fields-col" data-tutorial="detail-fields">
-                        <FieldSection title={t('sectionInvoiceInfo')} fields={dateFields} values={values} onChange={handleChange} readOnly={!editing} />
+                        <FieldSection
+                            title={t('sectionInvoiceInfo')}
+                            fields={dateFields}
+                            values={values}
+                            onChange={handleChange}
+                            readOnly={!editing}
+                            headerAction={hasDateFormat && !editing ? (
+                                <button
+                                    className="swap-dates-btn"
+                                    onClick={handleSwapDates}
+                                    title={t('swapDatesTitle')}
+                                >
+                                    {t('swapDates')}
+                                </button>
+                            ) : undefined}
+                        />
                         <FieldSection title={t('sectionSupplier')} fields={supplierFields} values={values} onChange={handleChange} readOnly={!editing} />
                         <FieldSection title={t('sectionReceiver')} fields={receiverFields} values={values} onChange={handleChange} readOnly={!editing} />
                         <FieldSection title={t('sectionFinancial')} fields={financialFields} values={values} onChange={handleChange} readOnly={!editing} />

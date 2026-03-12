@@ -47,6 +47,7 @@ export const bankStatementsTranslations: Translations = {
         // Actions
         uploadStatement: 'Ekstre Yükle',
         noTransactions: 'Bu ekstrede işlem bulunamadı.',
+        searchTransactionsPlaceholder: 'İşlemlerde ara...',
         backToStatements: 'Ekstrelere Dön',
         statementDetailTitle: 'Ekstre Detayı',
     },
@@ -92,6 +93,7 @@ export const bankStatementsTranslations: Translations = {
         // Actions
         uploadStatement: 'Upload Statement',
         noTransactions: 'No transactions found in this statement.',
+        searchTransactionsPlaceholder: 'Search transactions...',
         backToStatements: 'Back to Statements',
         statementDetailTitle: 'Statement Detail',
     },
@@ -137,6 +139,7 @@ export const bankStatementsTranslations: Translations = {
         // Actions
         uploadStatement: 'Auszug hochladen',
         noTransactions: 'Keine Transaktionen in diesem Auszug gefunden.',
+        searchTransactionsPlaceholder: 'Transaktionen suchen...',
         backToStatements: 'Zurück zu Auszügen',
         statementDetailTitle: 'Auszugsdetail',
     },

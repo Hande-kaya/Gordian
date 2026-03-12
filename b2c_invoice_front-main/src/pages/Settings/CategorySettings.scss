@@ -311,6 +311,29 @@
     &__footer {
         margin-top: 16px;
     }
+
+    // Scrollable card — scroll is on the whole box, not the table
+    .settings__card {
+        max-height: calc(100vh - 160px);
+        overflow-y: auto;
+
+        &::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        &::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 4px;
+
+            &:hover {
+                background: var(--text-muted);
+            }
+        }
+    }
 }
 
 @media (max-width: 640px) {

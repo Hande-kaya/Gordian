@@ -14,6 +14,7 @@ import documentApi, { DocumentItem } from '../../services/documentApi';
 import BulkUploadModal from '../InvoiceList/BulkUploadModal';
 import { getBankStatementColumns } from './columns';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import DragDropOverlay from '../../components/common/DragDropOverlay';
 import { DashboardIcon, ExpenseIcon, IncomeIcon, BankIcon, ReconciliationIcon, TrashIcon, FilesIcon, SettingsIcon } from '../../shared/icons/NavIcons';
 import './BankStatements.scss';
 
@@ -264,8 +265,14 @@ const BankStatements: React.FC = () => {
         </button>
     );
 
+    const handleGlobalDrop = useCallback((files: File[]) => {
+        setDroppedFiles(files);
+        setIsUploadModalOpen(true);
+    }, []);
+
     return (
         <>
+            <DragDropOverlay onDrop={handleGlobalDrop} label={t('dropzoneInlineHover')} />
             <DataDashboard
                 title={t('bankStatementsTitle')}
                 pageDescription={t('bankStatementsDescription')}

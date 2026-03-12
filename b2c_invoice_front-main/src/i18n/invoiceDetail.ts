@@ -76,6 +76,10 @@ export const invoiceDetailTranslations: Translations = {
         deleteConfirmLabel: 'Sil',
         deleteCancelLabel: 'Vazgeç',
 
+        // Date swap
+        swapDates: 'GG/AA \u21C4 AA/GG',
+        swapDatesTitle: 'Gün/Ay yerini değiştir',
+
         // Nav
         navExpenses: 'Harcamalar',
         navBankStatements: 'Banka Ekstreleri',
@@ -149,6 +153,10 @@ export const invoiceDetailTranslations: Translations = {
         deleteConfirmLabel: 'Delete',
         deleteCancelLabel: 'Cancel',
 
+        // Date swap
+        swapDates: 'DD/MM \u21C4 MM/DD',
+        swapDatesTitle: 'Swap day/month',
+
         // Nav
         navExpenses: 'Expenses',
         navBankStatements: 'Bank Statements',
@@ -221,6 +229,10 @@ export const invoiceDetailTranslations: Translations = {
         deleteMessage: 'Diese Rechnung wird in den Papierkorb verschoben. Sie können sie innerhalb von 30 Tagen wiederherstellen.',
         deleteConfirmLabel: 'Löschen',
         deleteCancelLabel: 'Abbrechen',
+
+        // Date swap
+        swapDates: 'TT/MM \u21C4 MM/TT',
+        swapDatesTitle: 'Tag/Monat tauschen',
 
         // Nav
         navExpenses: 'Ausgaben',
