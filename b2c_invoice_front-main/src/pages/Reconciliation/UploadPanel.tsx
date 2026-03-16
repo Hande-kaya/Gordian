@@ -2,7 +2,7 @@
  * Upload Panel Component
  * ======================
  * Reusable card with dropzone + recent documents list.
- * Used 3x in Reconciliation page (Expense / Bank Statement / Income).
+ * Used 3x in Reconciliation page (Expense / Bank Statement / Revenue).
  */
 
 import React, { useCallback, useState } from 'react';
@@ -23,6 +23,7 @@ interface UploadPanelProps {
 }
 
 const MAX_RECENT = 5;
+const COLLAPSED_COUNT = 2;
 
 const fmtCurrency = (v?: number | null, currency = 'TRY') => {
     if (v == null) return '-';
@@ -45,7 +46,7 @@ const getDocMetric = (doc: DocumentItem): string => {
 
 const getDetailRoute = (doc: DocumentItem): string => {
     if (doc.type === 'bank-statement') return `/bank-statements/${doc.id}`;
-    if (doc.type === 'income') return `/income/${doc.id}`;
+    if (doc.type === 'income') return `/revenue/${doc.id}`;
     return `/invoices/${doc.id}`;
 };
 
@@ -55,6 +56,7 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
     const { t } = useLang();
     const navigate = useNavigate();
     const [hover, setHover] = useState(false);
+    const [expanded, setExpanded] = useState(false);
 
     const processingDocs = documents.filter(
         d => d.ocr_status === 'pending' || d.ocr_status === 'processing',
@@ -95,7 +97,7 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
                 onDrop={handleDrop}
                 onClick={onUploadClick}
             >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                     <polyline points="17 8 12 3 7 8" />
                     <line x1="12" y1="3" x2="12" y2="15" />
@@ -158,22 +160,32 @@ const UploadPanel: React.FC<UploadPanelProps> = ({
                 {recentDocs.length === 0 && processingDocs.length === 0 ? (
                     <p className="upload-panel__empty">{t('noDocs')}</p>
                 ) : (
-                    <ul className="upload-panel__doc-list">
-                        {recentDocs.slice(0, compact ? 4 : MAX_RECENT).map(doc => (
-                            <li
-                                key={doc.id}
-                                className="upload-panel__doc-item"
-                                onClick={() => navigate(getDetailRoute(doc))}
+                    <>
+                        <ul className="upload-panel__doc-list">
+                            {recentDocs.slice(0, expanded ? MAX_RECENT : COLLAPSED_COUNT).map(doc => (
+                                <li
+                                    key={doc.id}
+                                    className="upload-panel__doc-item"
+                                    onClick={() => navigate(getDetailRoute(doc))}
+                                >
+                                    <span className="upload-panel__doc-name" title={doc.filename}>
+                                        {doc.filename}
+                                    </span>
+                                    <span className="upload-panel__doc-metric">
+                                        {getDocMetric(doc)}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                        {recentDocs.length > COLLAPSED_COUNT && (
+                            <button
+                                className="upload-panel__toggle-btn"
+                                onClick={() => setExpanded(prev => !prev)}
                             >
-                                <span className="upload-panel__doc-name" title={doc.filename}>
-                                    {doc.filename}
-                                </span>
-                                <span className="upload-panel__doc-metric">
-                                    {getDocMetric(doc)}
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
+                                {expanded ? t('showLess') : `${t('showMore')} (${recentDocs.length - COLLAPSED_COUNT})`}
+                            </button>
+                        )}
+                    </>
                 )}
             </div>
         </div>

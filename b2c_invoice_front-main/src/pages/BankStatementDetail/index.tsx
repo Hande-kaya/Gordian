@@ -10,12 +10,13 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Layout from '../../shared/layout/Layout';
 import { useLang } from '../../shared/i18n';
 import { useAuth } from '../../context/AuthContext';
+import { useDateFormat } from '../../context/DateFormatContext';
 import documentApi, { DocumentItem } from '../../services/documentApi';
 import FieldSection, { FieldDef } from '../InvoiceDetail/FieldSection';
 import PdfViewerPanel, { EntityWithBounds } from '../InvoiceDetail/PdfViewerPanel';
 import TransactionsTable, { Transaction } from './TransactionsTable';
 import ConfirmModal from '../../components/common/ConfirmModal';
-import { DashboardIcon, ExpenseIcon, IncomeIcon, BankIcon, ReconciliationIcon, TrashIcon, SettingsIcon } from '../../shared/icons/NavIcons';
+import { DashboardIcon, ExpenseIcon, RevenueIcon, BankIcon, ReconciliationIcon, TrashIcon, FilesIcon, SettingsIcon } from '../../shared/icons/NavIcons';
 import './BankStatementDetail.scss';
 
 function flattenDoc(doc: DocumentItem): Record<string, any> {
@@ -48,25 +49,24 @@ const BankStatementDetail: React.FC = () => {
     const location = useLocation();
     const { t } = useLang();
     const { user, logout } = useAuth();
+    const { fmtDate } = useDateFormat();
 
-    const statementInfoFields: FieldDef[] = useMemo(() => [
+    const COMMON_CURRENCIES = ['EUR', 'USD', 'TRY', 'GBP', 'CHF', 'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF'];
+
+    const statementDetailFields: FieldDef[] = useMemo(() => [
         { key: 'bank_name', label: t('fieldBankName') },
         { key: 'account_holder', label: t('fieldAccountHolder') },
         { key: 'account_number', label: t('fieldAccountNumber') },
         { key: 'card_number', label: t('fieldCardNumber') },
-        { key: 'statement_date', label: t('fieldStatementDate') },
-        { key: 'statement_period_start', label: t('fieldStatementPeriodStart') },
-        { key: 'statement_period_end', label: t('fieldStatementPeriodEnd') },
-    ], [t]);
-
-    const balanceFields: FieldDef[] = useMemo(() => [
+        { key: 'statement_date', label: t('fieldStatementDate'), type: 'date' },
+        { key: 'statement_period_start', label: t('fieldStatementPeriodStart'), type: 'date' },
+        { key: 'statement_period_end', label: t('fieldStatementPeriodEnd'), type: 'date' },
         { key: 'opening_balance', label: t('fieldOpeningBalance'), type: 'number' },
         { key: 'closing_balance', label: t('fieldClosingBalance'), type: 'number' },
         { key: 'total_debits', label: t('fieldTotalDebits'), type: 'number' },
         { key: 'total_credits', label: t('fieldTotalCredits'), type: 'number' },
         { key: 'minimum_payment', label: t('fieldMinimumPayment'), type: 'number' },
-        { key: 'due_date', label: t('fieldDueDate') },
-        { key: 'currency', label: t('fieldCurrency') },
+        { key: 'due_date', label: t('fieldDueDate'), type: 'date' },
     ], [t]);
 
     const [doc, setDoc] = useState<DocumentItem | null>(null);
@@ -84,10 +84,11 @@ const BankStatementDetail: React.FC = () => {
 
     const navItems = useMemo(() => [
         { id: 'dashboard', label: t('navDashboard'), icon: <DashboardIcon />, route: '/dashboard' },
-        { id: 'expenses', label: t('navExpenses'), icon: <ExpenseIcon />, route: '/invoices' },
-        { id: 'income', label: t('navIncome'), icon: <IncomeIcon />, route: '/income' },
-        { id: 'bank-statements', label: t('navBankStatements'), icon: <BankIcon />, route: '/bank-statements' },
         { id: 'reconciliation', label: t('navReconciliation'), icon: <ReconciliationIcon />, route: '/reconciliation' },
+        { id: 'bank-statements', label: t('navBankStatements'), icon: <BankIcon />, route: '/bank-statements' },
+        { id: 'expenses', label: t('navExpenses'), icon: <ExpenseIcon />, route: '/invoices' },
+        { id: 'revenue', label: t('navRevenue'), icon: <RevenueIcon />, route: '/revenue' },
+        { id: 'files', label: t('navFiles'), icon: <FilesIcon />, route: '/files' },
         { id: 'trash', label: t('navTrash'), icon: <TrashIcon />, route: '/trash' },
         { id: 'sep', label: '', icon: null, isSeparator: true },
         { id: 'settings', label: t('navSettings'), icon: <SettingsIcon />, route: '/settings' },
@@ -131,9 +132,7 @@ const BankStatementDetail: React.FC = () => {
         if (!id) return;
         setSaving(true);
         try {
-            // Save header field changes — exclude currency when it will be
-            // sent via updateTransactions so the PATCH handler can detect
-            // the old→new currency change for stale match marking.
+            // Save header field changes — exclude currency when sent via updateTransactions
             const changed: Record<string, any> = {};
             for (const k of Object.keys(values)) {
                 if (values[k] !== originalValues[k]) {
@@ -146,12 +145,12 @@ const BankStatementDetail: React.FC = () => {
                 setOriginalValues(prev => ({ ...prev, ...changed }));
             }
 
-            // Save transaction changes (also triggers when only currency changed)
+            // Save transaction + currency changes
             if (editedTransactions || editedCurrency) {
                 const res = await documentApi.updateTransactions(
                     id,
                     editedTransactions || transactions,
-                    editedCurrency || undefined
+                    editedCurrency || undefined,
                 );
                 if (res.success && res.data) {
                     setDoc(res.data);
@@ -170,7 +169,7 @@ const BankStatementDetail: React.FC = () => {
         } finally {
             setSaving(false);
         }
-    }, [id, values, originalValues, editedTransactions, editedCurrency]);
+    }, [id, values, originalValues, editedTransactions, editedCurrency, transactions]);
 
     const isBankStatement = doc?.type === 'bank-statement';
     const hasDateFormat = !!doc?.extracted_data?.date_format;
@@ -206,17 +205,8 @@ const BankStatementDetail: React.FC = () => {
     }, [id, navigate]);
 
     const headerActions = useMemo(() => (
-        <>
-            <button
-                className="header-action-btn"
-                onClick={() => navigate('/bank-statements')}
-            >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 4 }}>
-                    <polyline points="15 18 9 12 15 6" />
-                </svg>
-                {t('backToStatements')}
-            </button>
-            <div className="header-actions">
+        <div className="header-actions">
+            <div className="header-actions__left">
                 <button
                     className={`highlight-toggle${highlightsOn ? ' highlight-toggle--active' : ''}`}
                     onClick={() => setHighlightsOn(prev => !prev)}
@@ -255,16 +245,25 @@ const BankStatementDetail: React.FC = () => {
                     </>
                 )}
             </div>
-        </>
+            <div className="header-actions__right">
+                <button
+                    className="header-action-btn"
+                    onClick={() => navigate('/bank-statements')}
+                >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 4 }}>
+                        <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                    {t('backToStatements')}
+                </button>
+            </div>
+        </div>
     ), [highlightsOn, editing, saving, handleCancel, handleSave, navigate]);
 
     const pageDescription = useMemo(() => {
         if (!doc) return undefined;
-        const date = doc.created_at
-            ? new Date(doc.created_at).toLocaleDateString('tr-TR')
-            : '';
-        return date ? `${doc.filename}  ·  ${date}` : doc.filename;
-    }, [doc]);
+        const date = doc.created_at ? fmtDate(doc.created_at) : '';
+        return date && date !== '-' ? `${doc.filename}  ·  ${date}` : doc.filename;
+    }, [doc, fmtDate]);
 
     const logoEl = <span className="b2c-logo">Invoice<span>Manager</span></span>;
 
@@ -338,42 +337,61 @@ const BankStatementDetail: React.FC = () => {
                     </div>
 
                     <div className="bank-statement-detail__fields-col">
-                        <FieldSection
-                            title={t('sectionStatementInfo')}
-                            fields={statementInfoFields}
-                            values={values}
-                            onChange={handleChange}
-                            readOnly={!editing}
-                            headerAction={showSwapButton ? (
-                                <button
-                                    className="swap-dates-btn"
-                                    onClick={handleSwapDates}
-                                    title={t('swapDatesTitle')}
-                                >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" />
-                                        <polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" />
-                                    </svg>
-                                    DD/MM ↔ MM/DD
-                                </button>
-                            ) : undefined}
-                        />
-                        <FieldSection
-                            title={t('sectionBalance')}
-                            fields={balanceFields}
-                            values={values}
-                            onChange={handleChange}
-                            readOnly={!editing}
-                        />
+                        {/* Format Settings — date format + currency (only editable in edit mode) */}
+                        <div className={`format-settings${!editing ? ' format-settings--disabled' : ''}`}>
+                            <h3 className="format-settings__title">{t('sectionFormatSettings')}</h3>
+                            <div className="format-settings__grid">
+                                {showSwapButton && (
+                                    <div className="format-settings__item">
+                                        <span className="format-settings__label">{t('formatDateLabel')}</span>
+                                        <button
+                                            className="format-settings__swap-btn"
+                                            onClick={handleSwapDates}
+                                            disabled={!editing}
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                                                <polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                                            </svg>
+                                            DD/MM ↔ MM/DD
+                                        </button>
+                                        <p className="format-settings__desc">{t('formatDateDesc')}</p>
+                                    </div>
+                                )}
+                                <div className="format-settings__item">
+                                    <span className="format-settings__label">{t('formatCurrencyLabel')}</span>
+                                    <select
+                                        className="format-settings__currency-select"
+                                        value={editedCurrency || values.currency || 'EUR'}
+                                        onChange={e => {
+                                            setEditedCurrency(e.target.value);
+                                            handleChange('currency', e.target.value);
+                                        }}
+                                        disabled={!editing}
+                                    >
+                                        {COMMON_CURRENCIES.map(c => (
+                                            <option key={c} value={c}>{c}</option>
+                                        ))}
+                                    </select>
+                                    <p className="format-settings__desc">{t('formatCurrencyDesc')}</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <TransactionsTable
                             transactions={editedTransactions || transactions}
-                            currency={editedCurrency || values.currency || 'TRY'}
+                            currency={editedCurrency || values.currency || 'EUR'}
                             editable={editing}
                             onTransactionsChange={txs => setEditedTransactions(txs)}
-                            onCurrencyChange={c => {
-                                setEditedCurrency(c);
-                                handleChange('currency', c);
-                            }}
+                        />
+
+                        <FieldSection
+                            title={t('sectionStatementDetails')}
+                            fields={statementDetailFields}
+                            values={values}
+                            onChange={handleChange}
+                            readOnly={!editing}
+                            fmtDate={fmtDate}
                         />
                     </div>
                 </div>

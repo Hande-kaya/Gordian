@@ -1,7 +1,7 @@
 /**
  * Reconciliation Page
  * ====================
- * 4-panel layout: 3 upload panels (Expense, Bank Statement, Income)
+ * 4-panel layout: 3 upload panels (Expense, Bank Statement, Revenue)
  * + full-width matching panel below.
  * All data fetched via existing document API, matching is backend-driven.
  */
@@ -15,7 +15,14 @@ import BulkUploadModal from '../InvoiceList/BulkUploadModal';
 import UploadPanel from './UploadPanel';
 import MatchingPanel from './MatchingPanel';
 import { EnrichedTransaction } from './matchingUtils';
-import { ExpenseIcon, IncomeIcon, BankIcon } from '../../shared/icons/NavIcons';
+// Colored folder icons matching /files page
+const FolderIcon: React.FC<{ color: string }> = ({ color }) => (
+    <svg viewBox="0 0 80 64" width="28" height="22" fill="none">
+        <path d="M4 14C4 10.69 6.69 8 10 8H26L32 14H70C73.31 14 76 16.69 76 20V52C76 55.31 73.31 58 70 58H10C6.69 58 4 55.31 4 52V14Z" fill={color} opacity={0.18} />
+        <path d="M4 22C4 18.69 6.69 16 10 16H70C73.31 16 76 18.69 76 22V52C76 55.31 73.31 58 70 58H10C6.69 58 4 55.31 4 52V22Z" fill={color} opacity={0.32} />
+        <path d="M4 14C4 10.69 6.69 8 10 8H26C27.3 8 28.5 8.5 29.4 9.4L32 12H4V14Z" fill={color} opacity={0.45} />
+    </svg>
+);
 import DragDropOverlay, { DropZone } from '../../components/common/DragDropOverlay';
 import './Reconciliation.scss';
 
@@ -26,7 +33,7 @@ const Reconciliation: React.FC = () => {
 
     const [expenses, setExpenses] = useState<DocumentItem[]>([]);
     const [bankStatements, setBankStatements] = useState<DocumentItem[]>([]);
-    const [incomes, setIncomes] = useState<DocumentItem[]>([]);
+    const [revenues, setRevenues] = useState<DocumentItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Upload modal
@@ -50,7 +57,7 @@ const Reconciliation: React.FC = () => {
             ]);
             if (expRes.success && expRes.data) setExpenses(expRes.data.documents);
             if (bsRes.success && bsRes.data) setBankStatements(bsRes.data.documents);
-            if (incRes.success && incRes.data) setIncomes(incRes.data.documents);
+            if (incRes.success && incRes.data) setRevenues(incRes.data.documents);
 
             // Poll if any doc is still processing
             const allDocs = [
@@ -126,19 +133,19 @@ const Reconciliation: React.FC = () => {
             label: t('uploadStatements') || 'Bank Statement',
             onDrop: (files) => openUpload('bank-statement', files),
             className: 'drag-drop-zone--bank',
-            icon: <BankIcon />,
+            icon: <FolderIcon color="#8b5cf6" />,
         },
         {
             label: t('uploadExpenses') || 'Expense',
             onDrop: (files) => openUpload('invoice', files),
             className: 'drag-drop-zone--expense',
-            icon: <ExpenseIcon />,
+            icon: <FolderIcon color="#3b82f6" />,
         },
         {
-            label: t('uploadIncome') || 'Income',
+            label: t('uploadRevenue') || 'Revenue',
             onDrop: (files) => openUpload('income', files),
-            className: 'drag-drop-zone--income',
-            icon: <IncomeIcon />,
+            className: 'drag-drop-zone--revenue',
+            icon: <FolderIcon color="#10b981" />,
         },
     ], [t, openUpload]);
 
@@ -155,11 +162,11 @@ const Reconciliation: React.FC = () => {
                     </div>
                 ) : (
                     <>
-                        {/* Top: Upload panels — bank (left) | expense+income (right) */}
+                        {/* Top: Upload panels — bank (left) | expense+revenue (right) */}
                         <div className="upload-panels">
                             <UploadPanel
                                 title={t('uploadStatements')}
-                                icon={<BankIcon />}
+                                icon={<FolderIcon color="#8b5cf6" />}
                                 docType="bank-statement"
                                 documents={bankStatements}
                                 onUploadClick={() => openUpload('bank-statement')}
@@ -170,7 +177,7 @@ const Reconciliation: React.FC = () => {
                             <div className="upload-panels__right">
                                 <UploadPanel
                                     title={t('uploadExpenses')}
-                                    icon={<ExpenseIcon />}
+                                    icon={<FolderIcon color="#3b82f6" />}
                                     docType="invoice"
                                     documents={expenses}
                                     onUploadClick={() => openUpload('invoice')}
@@ -179,10 +186,10 @@ const Reconciliation: React.FC = () => {
                                     compact
                                 />
                                 <UploadPanel
-                                    title={t('uploadIncome')}
-                                    icon={<IncomeIcon />}
+                                    title={t('uploadRevenue')}
+                                    icon={<FolderIcon color="#10b981" />}
                                     docType="income"
-                                    documents={incomes}
+                                    documents={revenues}
                                     onUploadClick={() => openUpload('income')}
                                     onDrop={(files) => openUpload('income', files)}
                                     onCancel={handleCancelProcessing}
@@ -195,7 +202,7 @@ const Reconciliation: React.FC = () => {
                         <MatchingPanel
                             hasBankTransactions={bankTransactions.length > 0}
                             expenses={expenses.filter(d => d.ocr_status === 'completed')}
-                            incomes={incomes.filter(d => d.ocr_status === 'completed')}
+                            revenues={revenues.filter(d => d.ocr_status === 'completed')}
                             onMatchingComplete={() => fetchAll()}
                             refreshTrigger={refreshCounter}
                         />

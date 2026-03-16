@@ -32,7 +32,7 @@ export const trashTranslations: Translations = {
         trashPermanentDeleteError: 'Silme sırasında hata oluştu.',
 
         trashTabExpenses: 'Harcamalar',
-        trashTabIncome: 'Gelirler',
+        trashTabRevenue: 'Gelirler',
         trashTabBankStatements: 'Banka Ekstreleri',
 
     },
@@ -63,7 +63,7 @@ export const trashTranslations: Translations = {
         trashPermanentDeleteError: 'Error during deletion.',
 
         trashTabExpenses: 'Expenses',
-        trashTabIncome: 'Income',
+        trashTabRevenue: 'Revenue',
         trashTabBankStatements: 'Bank Statements',
 
     },
@@ -94,7 +94,7 @@ export const trashTranslations: Translations = {
         trashPermanentDeleteError: 'Fehler beim Löschen.',
 
         trashTabExpenses: 'Ausgaben',
-        trashTabIncome: 'Einnahmen',
+        trashTabRevenue: 'Einnahmen',
         trashTabBankStatements: 'Kontoauszüge',
 
     },

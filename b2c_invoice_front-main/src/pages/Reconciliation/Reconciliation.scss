@@ -34,13 +34,13 @@
 .upload-panels {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: 12px;
     align-items: stretch;
 
     &__right {
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 8px;
     }
 }
 
@@ -49,15 +49,16 @@
    ================================================================ */
 
 .matching-panel {
-    background: var(--bg-white, #fff);
-    border: 1px solid var(--border-color, #e2e8f0);
-    border-radius: 12px;
-    padding: 20px;
+    padding: 0;
 
     &--empty {
         display: flex;
         flex-direction: column;
         align-items: center;
+        background: var(--bg-white, #fff);
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 12px;
+        padding: 20px;
     }
 
     &__header {
@@ -67,6 +68,14 @@
         flex-wrap: wrap;
         gap: 12px;
         margin-bottom: 16px;
+    }
+
+    &__header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+        min-width: 0;
     }
 
     &__title {
@@ -142,12 +151,98 @@
         &--unmatched strong { color: #d97706; }
     }
 
+    /* Toolbar: filters + page size + export */
+    &__toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    &__toolbar-right {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    &__toolbar-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 12px;
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 6px;
+        background: transparent;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-secondary, #64748b);
+        cursor: pointer;
+        transition: all 0.15s;
+        white-space: nowrap;
+
+        &:hover { background: var(--bg-hover, #f1f5f9); }
+        &:disabled { opacity: 0.4; cursor: not-allowed; }
+    }
+
+    /* Page size dropdown */
+    &__page-size-wrap {
+        position: relative;
+    }
+
+    &__dropdown-arrow {
+        font-size: 8px;
+        transition: transform 0.15s;
+        margin-left: 2px;
+
+        &--open {
+            transform: rotate(180deg);
+        }
+    }
+
+    &__page-size-dropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 4px;
+        background: var(--bg-white, #fff);
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        z-index: 100;
+        min-width: 60px;
+        overflow: hidden;
+    }
+
+    &__page-size-option {
+        display: block;
+        width: 100%;
+        padding: 6px 14px;
+        border: none;
+        background: transparent;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-primary, #1e293b);
+        cursor: pointer;
+        text-align: left;
+        transition: background 0.1s;
+
+        &:hover { background: var(--bg-hover, #f1f5f9); }
+
+        &--active {
+            background: var(--primary-color, #3b82f6);
+            color: #fff;
+            &:hover { background: #2563eb; }
+        }
+    }
+
     /* Filter tabs */
     &__filters {
         display: flex;
         align-items: center;
         gap: 4px;
-        margin-bottom: 12px;
         flex-wrap: wrap;
     }
 
@@ -173,11 +268,53 @@
         }
     }
 
+    /* Table wrapper — transparent so spacer column shows page background, not card bg */
+    &__table-wrap {
+        background: transparent;
+        border-radius: 8px;
+        overflow-x: auto;
+    }
+
+    /* Single table with two-card visual split via spacer column */
+    &__table--split {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 13px;
+        table-layout: fixed;
+        background: transparent;
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        th {
+            padding: 8px 10px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary, #64748b);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 8px 10px;
+            color: var(--text-primary, #1e293b);
+            height: 40px;
+            max-height: 40px;
+            overflow: hidden;
+        }
+    }
+
     /* Pagination */
     &__pagination {
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-end;
         gap: 12px;
         padding-top: 12px;
     }
@@ -201,6 +338,12 @@
         color: var(--text-muted, #94a3b8);
     }
 
+    &__page-current {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-primary, #1e293b);
+    }
+
     &__empty-state {
         display: flex;
         flex-direction: column;
@@ -221,45 +364,119 @@
         font-size: 13px;
         margin: 0;
     }
+}
 
-    /* Table */
-    &__table-wrap {
-        overflow-x: auto;
-        border-radius: 8px;
-        border: 1px solid var(--border-color, #e2e8f0);
-        position: relative;
-    }
+/* ================================================================
+   Spacer column + cell-level card borders
+   Creates two visual "cards" within a single <table>.
+   ================================================================ */
 
-    &__table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 13px;
+/* All table rows must be transparent so spacer gap is visible.
+   Only .mcell cells have backgrounds — never the <tr> or <table>. */
+.matching-panel__table--split tr,
+.matching-panel__table--split thead,
+.matching-panel__table--split tbody {
+    background: transparent !important;
+}
 
-        thead {
-            background: var(--bg-hover, #f8fafc);
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
+/* Spacer column — transparent gap between left and right halves */
+.mcell--spacer {
+    width: 16px !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    pointer-events: none;
+}
 
-        th {
-            padding: 10px 12px;
-            text-align: left;
-            font-weight: 600;
-            color: var(--text-secondary, #64748b);
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            border-bottom: 1px solid var(--border-color, #e2e8f0);
-            white-space: nowrap;
-        }
+/* All data/header cells get background */
+.mcell {
+    background: var(--bg-white, #fff);
+    border-top: 1px solid var(--border-light, #f1f5f9);
+}
 
-        td {
-            padding: 10px 12px;
-            border-bottom: 1px solid var(--border-light, #f1f5f9);
-            color: var(--text-primary, #1e293b);
-        }
-    }
+/* Header cells */
+thead .mcell {
+    background: var(--bg-hover, #f8fafc);
+    border-top: 1px solid var(--border-color, #e2e8f0);
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+/* Filter row cells — no border-top so they blend with header row above, no bridge effect */
+thead .mcell--filter {
+    border-top: none;
+    padding-top: 4px;
+    padding-bottom: 6px;
+}
+
+/* Left card borders */
+.mcell--left-first {
+    border-left: 1px solid var(--border-color, #e2e8f0);
+}
+
+.mcell--left-last {
+    border-right: 1px solid var(--border-color, #e2e8f0);
+}
+
+/* Right card borders */
+.mcell--right-first {
+    border-left: 1px solid var(--border-color, #e2e8f0);
+}
+
+.mcell--right-last {
+    border-right: 1px solid var(--border-color, #e2e8f0);
+}
+
+/* First header row: top border-radius */
+thead tr:first-child .mcell--left-first {
+    border-top-left-radius: 8px;
+}
+thead tr:first-child .mcell--left-last {
+    border-top-right-radius: 8px;
+}
+thead tr:first-child .mcell--right-first {
+    border-top-left-radius: 8px;
+}
+thead tr:first-child .mcell--right-last {
+    border-top-right-radius: 8px;
+}
+
+/* Last body row: bottom border + radius */
+tbody tr:last-child .mcell {
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+tbody tr:last-child .mcell--left-first {
+    border-bottom-left-radius: 8px;
+}
+tbody tr:last-child .mcell--left-last {
+    border-bottom-right-radius: 8px;
+}
+tbody tr:last-child .mcell--right-first {
+    border-bottom-left-radius: 8px;
+}
+tbody tr:last-child .mcell--right-last {
+    border-bottom-right-radius: 8px;
+}
+
+/* Row hover — override background on mcell children */
+.matching-row--clickable:hover .mcell {
+    background: rgba(59, 130, 246, 0.04);
+}
+.matching-row--matched:hover .mcell {
+    background: rgba(22, 163, 74, 0.08);
+}
+.matching-row--stale:hover .mcell {
+    background: rgba(239, 68, 68, 0.08);
+}
+
+/* Matched / unmatched / stale row base backgrounds */
+.matching-row--matched .mcell {
+    background: rgba(22, 163, 74, 0.03);
+}
+.matching-row--unmatched .mcell {
+    background: rgba(217, 119, 6, 0.03);
+}
+.matching-row--stale .mcell {
+    background: rgba(239, 68, 68, 0.05);
 }
 
 /* Re-match option buttons (inside confirm-modal) */
@@ -326,11 +543,22 @@
     .upload-panels {
         grid-template-columns: 1fr;
     }
+
+    /* On smaller screens, allow horizontal scroll on the table */
+    .matching-panel__table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
 }
 
 @media (max-width: 768px) {
+    .matching-panel__toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
     .matching-panel__table-wrap {
-        max-height: 400px;
+        max-height: 500px;
         overflow-y: auto;
     }
 }

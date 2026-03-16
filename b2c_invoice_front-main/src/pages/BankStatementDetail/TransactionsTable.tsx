@@ -7,6 +7,7 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { useLang } from '../../shared/i18n';
+import { useDateFormat } from '../../context/DateFormatContext';
 
 export interface Transaction {
     date?: string;
@@ -21,13 +22,10 @@ interface TransactionsTableProps {
     currency?: string;
     editable?: boolean;
     onTransactionsChange?: (txs: Transaction[]) => void;
-    onCurrencyChange?: (currency: string) => void;
 }
 
 type SortKey = 'date' | 'description' | 'amount' | 'balance';
 type SortDir = 'asc' | 'desc';
-
-const COMMON_CURRENCIES = ['EUR', 'USD', 'TRY', 'GBP', 'CHF', 'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF'];
 
 const fmtNum = (v?: number | null) =>
     v != null ? v.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) : '';
@@ -45,9 +43,10 @@ const fmtCurrency = (v?: number | null, currency = '') => {
 };
 
 const TransactionsTable: React.FC<TransactionsTableProps> = ({
-    transactions, currency = '', editable = false, onTransactionsChange, onCurrencyChange,
+    transactions, currency = '', editable = false, onTransactionsChange,
 }) => {
     const { t } = useLang();
+    const { fmtDate } = useDateFormat();
     const [sortKey, setSortKey] = useState<SortKey>('date');
     const [sortDir, setSortDir] = useState<SortDir>('asc');
     const [searchQuery, setSearchQuery] = useState('');
@@ -203,23 +202,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                                 className="col-debit sortable"
                                 onClick={() => handleSort('amount')}
                             >
-                                {editable && onCurrencyChange ? (
-                                    <span className="col-debit__header">
-                                        {t('txDebit')}
-                                        <select
-                                            className="col-debit__currency-select"
-                                            value={currency}
-                                            onChange={e => { e.stopPropagation(); onCurrencyChange(e.target.value); }}
-                                            onClick={e => e.stopPropagation()}
-                                        >
-                                            {COMMON_CURRENCIES.map(c => (
-                                                <option key={c} value={c}>{c}</option>
-                                            ))}
-                                        </select>
-                                    </span>
-                                ) : (
-                                    <>{t('txDebit')}{currency ? ` (${currency})` : ''}{sortIcon('amount')}</>
-                                )}
+                                {t('txDebit')}{currency ? ` (${currency})` : ''}{sortIcon('amount')}
                             </th>
                             <th className="col-credit">
                                 {t('txCredit')}{!editable && currency ? ` (${currency})` : ''}
@@ -330,7 +313,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                             return (
                                 <tr key={idx}>
                                     <td className="col-num">{idx + 1}</td>
-                                    <td className="col-date">{tx.date || '-'}</td>
+                                    <td className="col-date">{fmtDate(tx.date)}</td>
                                     <td className="col-desc">{tx.description || '-'}</td>
                                     <td className="col-debit num-cell">
                                         {!isCredit ? fmtCurrency(absAmount, currency) : ''}

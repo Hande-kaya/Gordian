@@ -5,10 +5,12 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import { useLang } from '../../shared/i18n';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme, Theme } from '../../context/ThemeContext';
+import { useDateFormat, DateFormat } from '../../context/DateFormatContext';
 import { authApi } from '../../services/authApi';
 import { guardNavigation } from '../../shared/hooks/useUnsavedChanges';
 import CategorySettings from './CategorySettings';
@@ -23,12 +25,14 @@ const hasPasswordFlag = (u: any): boolean => u?.has_password !== undefined ? !!u
 const isValidEmail = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(value);
 type TabId = 'profile' | 'security' | 'display' | 'categories' | 'subscription' | 'usage' | 'account';
 const TABS: TabId[] = ['profile', 'security', 'display', 'categories', 'subscription', 'usage', 'account'];
-const Settings: React.FC = () => {
-    const { t, lang, setLang } = useLang();
-    const { user, refreshSession } = useAuth();
-    const { theme, setTheme } = useTheme();
 
-    // Read initial tab from URL params (e.g. ?tab=subscription)
+const Settings: React.FC = () => {
+    const navigate = useNavigate();
+    const { t, lang, setLang } = useLang();
+    const { user, refreshSession, logout } = useAuth();
+    const { theme, setTheme } = useTheme();
+    const { dateFormat, setDateFormat, fmtDate } = useDateFormat();
+
     const [activeTab, setActiveTab] = useState<TabId>(() => {
         const params = new URLSearchParams(window.location.search);
         const tab = params.get('tab') as TabId;
@@ -37,7 +41,6 @@ const Settings: React.FC = () => {
     const [usageRefreshKey, setUsageRefreshKey] = useState(0);
     const [paymentMsg, setPaymentMsg] = useState<MsgState>(null);
 
-    // Handle payment success/cancel from Stripe redirect
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const payment = params.get('payment');
@@ -48,7 +51,6 @@ const Settings: React.FC = () => {
             setPaymentMsg({ type: 'error', text: t('paymentCancelled') });
         }
         if (payment) {
-            // Clean URL without reload
             const url = new URL(window.location.href);
             url.searchParams.delete('payment');
             window.history.replaceState({}, '', url.toString());
@@ -61,9 +63,9 @@ const Settings: React.FC = () => {
     const [profileSaving, setProfileSaving] = useState(false);
     const [profileMsg, setProfileMsg] = useState<MsgState>(null);
 
-    // Profile photo - local preview only until Save
+    // Profile photo
     const [photoPreview, setPhotoPreview] = useState<string | null>(user?.profile_photo || null);
-    const [pendingPhoto, setPendingPhoto] = useState<string | null>(null); // base64 to upload on save
+    const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
     const [photoSaving, setPhotoSaving] = useState(false);
     const [photoMsg, setPhotoMsg] = useState<MsgState>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -77,6 +79,10 @@ const Settings: React.FC = () => {
 
     // Delete account
     const [deleteConfirm, setDeleteConfirm] = useState(false);
+    const [deleteInput, setDeleteInput] = useState('');
+    const [deleteLoading, setDeleteLoading] = useState(false);
+    const [deleteFinal, setDeleteFinal] = useState(false);
+    const [deleteError, setDeleteError] = useState('');
 
     const tabLabelKey: Record<TabId, string> = {
         profile: 'tabProfile', security: 'tabSecurity', display: 'tabDisplay',
@@ -89,7 +95,6 @@ const Settings: React.FC = () => {
         setPhotoMsg(null);
         setProfileSaving(true);
         try {
-            // Save photo first if changed
             if (pendingPhoto === '__remove__') {
                 await authApi.removeProfilePhoto();
                 setPendingPhoto(null);
@@ -100,8 +105,6 @@ const Settings: React.FC = () => {
                 }
                 setPendingPhoto(null);
             }
-
-            // Save name/email if changed
             const updates: { name?: string } = {};
             if (name.trim() && name.trim() !== user?.name) updates.name = name.trim();
             if (Object.keys(updates).length) {
@@ -111,8 +114,6 @@ const Settings: React.FC = () => {
                     return;
                 }
             }
-
-            // Refresh session to reflect all changes (cookie-based)
             await refreshSession();
             setProfileMsg({ type: 'success', text: t('profileSuccess') });
         } catch {
@@ -135,8 +136,7 @@ const Settings: React.FC = () => {
                     const img = new Image();
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        canvas.width = 200;
-                        canvas.height = 200;
+                        canvas.width = 200; canvas.height = 200;
                         const ctx = canvas.getContext('2d')!;
                         const size = Math.min(img.width, img.height);
                         const sx = (img.width - size) / 2;
@@ -169,7 +169,6 @@ const Settings: React.FC = () => {
         setPwMsg(null);
         if (newPw.length < 8) { setPwMsg({ type: 'error', text: t('passwordTooShort') }); return; }
         if (newPw !== confirmPw) { setPwMsg({ type: 'error', text: t('passwordMismatch') }); return; }
-
         setPwSaving(true);
         try {
             const res = userHasPassword
@@ -178,7 +177,6 @@ const Settings: React.FC = () => {
             if (res.success) {
                 setPwMsg({ type: 'success', text: userHasPassword ? t('passwordSuccess') : t('setPasswordSuccess') });
                 setCurrentPw(''); setNewPw(''); setConfirmPw('');
-                // Refresh session to update has_password flag (cookie-based)
                 await refreshSession();
             } else {
                 const msg = res.message?.includes('incorrect') ? t('passwordWrong') : res.message || t('passwordError');
@@ -191,11 +189,36 @@ const Settings: React.FC = () => {
         }
     }, [currentPw, newPw, confirmPw, userHasPassword, refreshSession, t]);
 
+    const handleDeleteAccount = useCallback(async () => {
+        setDeleteError('');
+        setDeleteLoading(true);
+        try {
+            const res = await authApi.deleteAccount();
+            if (res.success) {
+                localStorage.removeItem('access_token');
+                await logout();
+                navigate('/login', { replace: true });
+            } else {
+                setDeleteError(res.message || t('deleteAccountError'));
+            }
+        } catch {
+            setDeleteError(t('deleteAccountError'));
+        } finally {
+            setDeleteLoading(false);
+        }
+    }, [logout, navigate, t]);
+
+    const handleCancelDelete = useCallback(() => {
+        setDeleteConfirm(false);
+        setDeleteInput('');
+        setDeleteError('');
+    }, []);
+
     const profileChanged = name.trim() !== (user?.name || '') || email.trim() !== (user?.email || '') || !!pendingPhoto;
     const pwReady = userHasPassword
         ? (currentPw.length > 0 && newPw.length >= 8 && confirmPw.length > 0)
         : (newPw.length >= 8 && confirmPw.length > 0);
-    const initials = (user?.name || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const initials = (user?.name || 'U').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
 
     const renderContent = () => {
         switch (activeTab) {
@@ -296,11 +319,9 @@ const Settings: React.FC = () => {
                         <p className="settings__card-desc">{t('themeDescription')}</p>
                         <div className="settings__theme-options">
                             {themeOptions.map(opt => (
-                                <button
-                                    key={opt.value}
+                                <button key={opt.value}
                                     className={`settings__theme-btn ${theme === opt.value ? 'settings__theme-btn--active' : ''}`}
-                                    onClick={() => handleThemeChange(opt.value)}
-                                >
+                                    onClick={() => handleThemeChange(opt.value)}>
                                     <span className="settings__theme-icon">{opt.icon}</span>
                                     <span className="settings__theme-label">{opt.label}</span>
                                     <span className="settings__theme-desc">{opt.desc}</span>
@@ -311,17 +332,36 @@ const Settings: React.FC = () => {
                         <p className="settings__card-desc">{t('languageDescription')}</p>
                         <div className="settings__lang-options">
                             <button className={`settings__lang-btn ${lang === 'en' ? 'settings__lang-btn--active' : ''}`} onClick={() => setLang('en')}>
-                                <span className="settings__lang-flag">EN</span>
-                                {t('languageEnglish')}
+                                <span className="settings__lang-flag">EN</span>{t('languageEnglish')}
                             </button>
                             <button className={`settings__lang-btn ${lang === 'de' ? 'settings__lang-btn--active' : ''}`} onClick={() => setLang('de')}>
-                                <span className="settings__lang-flag">DE</span>
-                                {t('languageGerman')}
+                                <span className="settings__lang-flag">DE</span>{t('languageGerman')}
                             </button>
                             <button className={`settings__lang-btn ${lang === 'tr' ? 'settings__lang-btn--active' : ''}`} onClick={() => setLang('tr')}>
-                                <span className="settings__lang-flag">TR</span>
-                                {t('languageTurkish')}
+                                <span className="settings__lang-flag">TR</span>{t('languageTurkish')}
                             </button>
+                        </div>
+                        <h3 className="settings__card-title" style={{ marginTop: 28 }}>{t('dateFormatSection')}</h3>
+                        <p className="settings__card-desc">{t('dateFormatDescription')}</p>
+                        <div className="settings__date-format-options">
+                            {([
+                                { value: 'eu' as DateFormat, label: 'EU', example: '15.03.2024' },
+                                { value: 'us' as DateFormat, label: 'US', example: '03/15/2024' },
+                                { value: 'iso' as DateFormat, label: 'ISO', example: '2024-03-15' },
+                                { value: 'short' as DateFormat, label: 'Short', example: '15 Mar 2024' },
+                            ]).map(opt => (
+                                <button
+                                    key={opt.value}
+                                    className={`settings__date-format-btn ${dateFormat === opt.value ? 'settings__date-format-btn--active' : ''}`}
+                                    onClick={() => {
+                                        setDateFormat(opt.value);
+                                        authApi.updatePreferences({ date_format: opt.value });
+                                    }}
+                                >
+                                    <span className="settings__lang-flag">{opt.label}</span>
+                                    {opt.example}
+                                </button>
+                            ))}
                         </div>
                     </div>
                 );
@@ -354,24 +394,51 @@ const Settings: React.FC = () => {
                             </div>
                         </div>
                         <div className="settings__card settings__card--danger" style={{ marginTop: 20 }}>
-                            <h3 className="settings__card-title">{t('deleteAccountBtn')}</h3>
-                            <p className="settings__card-desc">{t('deleteAccountMessage')}</p>
-                            <button
-                                className="settings__btn settings__btn--danger"
-                                onClick={() => setDeleteConfirm(true)}
-                            >
-                                {t('deleteAccountBtn')}
-                            </button>
+                            <h3 className="settings__card-title">{t('deleteAccountTitle')}</h3>
+                            <p className="settings__card-desc">{t('deleteAccountWarning')}</p>
+                            {!deleteConfirm ? (
+                                <button className="settings__btn settings__btn--danger" onClick={() => setDeleteConfirm(true)}>
+                                    {t('deleteAccountBtn')}
+                                </button>
+                            ) : (
+                                <div className="settings__delete-confirm">
+                                    <p className="settings__delete-hint">{t('deleteAccountTypeHint')}</p>
+                                    <input
+                                        className="settings__input"
+                                        value={deleteInput}
+                                        onChange={e => setDeleteInput(e.target.value)}
+                                        placeholder={t('deleteAccountTypePlaceholder')}
+                                        autoFocus
+                                    />
+                                    {deleteError && <div className="settings__message settings__message--error">{deleteError}</div>}
+                                    <div className="settings__delete-actions">
+                                        <button
+                                            className="settings__btn settings__btn--danger"
+                                            onClick={() => setDeleteFinal(true)}
+                                            disabled={deleteInput !== 'delete' || deleteLoading}
+                                        >
+                                            {t('deleteAccountConfirm')}
+                                        </button>
+                                        <button
+                                            className="settings__btn"
+                                            onClick={handleCancelDelete}
+                                            disabled={deleteLoading}
+                                        >
+                                            {t('deleteAccountCancel')}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <ConfirmModal
-                            isOpen={deleteConfirm}
+                            isOpen={deleteFinal}
                             title={t('deleteAccountTitle')}
-                            message={t('deleteAccountMessage')}
-                            confirmLabel={t('deleteAccountConfirm')}
+                            message={t('deleteAccountFinalMessage')}
+                            confirmLabel={t('deleteAccountFinalConfirm')}
                             cancelLabel={t('deleteAccountCancel')}
                             variant="danger"
-                            onConfirm={() => setDeleteConfirm(false)}
-                            onCancel={() => setDeleteConfirm(false)}
+                            onConfirm={() => { setDeleteFinal(false); handleDeleteAccount(); }}
+                            onCancel={() => setDeleteFinal(false)}
                         />
                     </>
                 );

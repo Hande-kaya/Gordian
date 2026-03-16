@@ -77,6 +77,59 @@ class DocumentUpload(Resource):
             return {'success': False, 'message': 'Upload failed'}, 500
 
 
+@document_ns.route('/create')
+class DocumentCreate(Resource):
+    @document_ns.doc('create_manual_document')
+    @token_required
+    def post(self):
+        """Create a document manually (no file upload)."""
+        try:
+            user = request.current_user
+            user_id = user.get('user_id')
+            company_id = user.get('company_id')
+
+            if not company_id:
+                return {'success': False, 'message': 'User company not found'}, 400
+
+            data = request.get_json()
+            if not data:
+                return {'success': False, 'message': 'JSON body required'}, 400
+
+            doc_type = data.get('type', 'invoice')
+            if doc_type not in ('invoice', 'income', 'bank-statement'):
+                return {'success': False, 'message': 'Type must be invoice, income, or bank-statement'}, 400
+
+            extracted_data = data.get('extracted_data', {})
+            if not isinstance(extracted_data, dict):
+                return {'success': False, 'message': 'extracted_data must be an object'}, 400
+
+            filename = data.get('filename')
+
+            document_service = get_document_service()
+            result = document_service.create_manual_document(
+                doc_type=doc_type,
+                user_id=user_id,
+                company_id=company_id,
+                extracted_data=extracted_data,
+                filename=filename,
+            )
+
+            if not result:
+                return {'success': False, 'message': 'Failed to create document'}, 500
+
+            return {
+                'success': True,
+                'data': result,
+                'message': 'Document created successfully'
+            }, 201
+
+        except ValueError as e:
+            return {'success': False, 'message': str(e)}, 400
+        except Exception as e:
+            logger.error(f"Manual create error: {e}")
+            return {'success': False, 'message': 'Failed to create document'}, 500
+
+
 @document_ns.route('')
 class DocumentList(Resource):
     @document_ns.doc('list_documents')
@@ -96,6 +149,11 @@ class DocumentList(Resource):
             match_status = safe_string_param(
                 request.args.get('match_status'), ('matched', 'unmatched', 'all')
             )
+            search = request.args.get('search', '').strip() or None
+            filter_date = request.args.get('filter_date', '').strip() or None
+            filter_amount = request.args.get('filter_amount', '').strip() or None
+            filter_currency = request.args.get('filter_currency', '').strip() or None
+            filter_supplier = request.args.get('filter_supplier', '').strip() or None
 
             document_service = get_document_service()
             result = document_service.get_documents(
@@ -103,7 +161,12 @@ class DocumentList(Resource):
                 doc_type=doc_type,
                 page=page,
                 page_size=page_size,
-                match_status=match_status
+                match_status=match_status,
+                search=search,
+                filter_date=filter_date,
+                filter_amount=filter_amount,
+                filter_currency=filter_currency,
+                filter_supplier=filter_supplier,
             )
 
             return {

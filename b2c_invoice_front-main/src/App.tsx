@@ -11,6 +11,7 @@ import { LanguageProvider } from './shared/i18n';
 import { allTranslations } from './i18n';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { DateFormatProvider } from './context/DateFormatContext';
 import { OnboardingProvider } from './context/OnboardingContext';
 import { CategoryProvider } from './context/CategoryContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -29,7 +30,7 @@ const ResetPasswordPage = React.lazy(() => import('./pages/auth/ResetPasswordPag
 const SsoCallbackPage = React.lazy(() => import('./pages/auth/SsoCallbackPage'));
 const LandingPage = React.lazy(() => import('./pages/Landing/LandingPage'));
 const InvoiceList = React.lazy(() => import('./pages/InvoiceList'));
-const IncomeList = React.lazy(() => import('./pages/IncomeList'));
+const RevenueList = React.lazy(() => import('./pages/RevenueList'));
 const InvoiceDetail = React.lazy(() => import('./pages/InvoiceDetail'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Settings = React.lazy(() => import('./pages/Settings'));
@@ -51,6 +52,7 @@ function App() {
             <LanguageProvider translations={allTranslations}>
             <AuthProvider>
             <ThemeProvider>
+            <DateFormatProvider>
             <CategoryProvider>
             <OnboardingProvider>
                 <Suspense fallback={<PageLoader />}>
@@ -74,10 +76,10 @@ function App() {
                     <Route path="/invoices/:id" element={
                         <ProtectedRoute><InvoiceDetail /></ProtectedRoute>
                     } />
-                    <Route path="/income" element={
-                        <ProtectedRoute><IncomeList /></ProtectedRoute>
+                    <Route path="/revenue" element={
+                        <ProtectedRoute><RevenueList /></ProtectedRoute>
                     } />
-                    <Route path="/income/:id" element={
+                    <Route path="/revenue/:id" element={
                         <ProtectedRoute><InvoiceDetail /></ProtectedRoute>
                     } />
                     <Route path="/bank-statements" element={
@@ -107,6 +109,7 @@ function App() {
                 <TutorialOverlay />
             </OnboardingProvider>
             </CategoryProvider>
+            </DateFormatProvider>
             </ThemeProvider>
             </AuthProvider>
             </LanguageProvider>

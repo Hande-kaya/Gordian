@@ -65,16 +65,38 @@ export interface DocumentListResponse {
 // API Functions
 // =============================================================================
 
+export interface DocumentFilters {
+    search?: string;
+    filter_date?: string;
+    filter_amount?: string;
+    filter_currency?: string;
+    filter_supplier?: string;
+}
+
 export const getDocuments = async (
     page: number = 1,
     pageSize: number = 20,
     type?: 'invoice' | 'quote' | 'income' | 'bank-statement',
-    matchStatus?: 'all' | 'matched' | 'unmatched'
+    matchStatus?: 'all' | 'matched' | 'unmatched',
+    filters?: DocumentFilters,
 ): Promise<ApiResponse<DocumentListResponse>> => {
     const params: Record<string, any> = { page, page_size: pageSize };
     if (type) params.type = type;
     if (matchStatus) params.match_status = matchStatus;
+    if (filters) {
+        Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
+    }
     return apiService.get<DocumentListResponse>('/api/documents', params);
+};
+
+export const createManualDocument = async (
+    type: 'invoice' | 'income' | 'bank-statement',
+    extractedData: Record<string, any>,
+    filename?: string,
+): Promise<ApiResponse<DocumentItem>> => {
+    const body: Record<string, any> = { type, extracted_data: extractedData };
+    if (filename) body.filename = filename;
+    return apiService.post<DocumentItem>('/api/documents/create', body);
 };
 
 export const getDocument = async (
@@ -187,6 +209,7 @@ export const resetExpenseCategories = async (): Promise<ApiResponse<CategoriesRe
 
 const documentApi = {
     getDocuments,
+    createManualDocument,
     getDocument,
     deleteDocument,
     updateDocumentFields,

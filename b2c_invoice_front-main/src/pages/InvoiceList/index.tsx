@@ -12,11 +12,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { DataDashboard } from '../../shared/components';
 import { useLang } from '../../shared/i18n';
 import { useAuth } from '../../context/AuthContext';
+import { useDateFormat } from '../../context/DateFormatContext';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { tutorialSteps } from '../../components/tutorial/tutorialSteps';
 import documentApi, { DocumentItem } from '../../services/documentApi';
 import InvoiceExportModal, { ExportConfig } from './InvoiceExportModal';
 import BulkUploadModal from './BulkUploadModal';
+import ManualEntryModal from './ManualEntryModal';
 import { exportInvoicesToExcel } from '../../utils/invoiceExport';
 import { getInvoiceColumns } from './columns';
 import { useCategories } from '../../context/CategoryContext';
@@ -24,7 +26,7 @@ import { DISPLAY_CURRENCIES, getPreferredCurrency, setPreferredCurrency, convert
 import { useUnsavedChanges, guardNavigation } from '../../shared/hooks/useUnsavedChanges';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import DragDropOverlay from '../../components/common/DragDropOverlay';
-import { DashboardIcon, ExpenseIcon, IncomeIcon, BankIcon, ReconciliationIcon, TrashIcon, FilesIcon, SettingsIcon } from '../../shared/icons/NavIcons';
+import { DashboardIcon, ExpenseIcon, RevenueIcon, BankIcon, ReconciliationIcon, TrashIcon, FilesIcon, SettingsIcon } from '../../shared/icons/NavIcons';
 import './InvoiceList.scss';
 
 interface InvoiceListProps {
@@ -36,6 +38,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ docType = 'invoice' }) => {
     const location = useLocation();
     const { user, logout } = useAuth();
     const { t, lang } = useLang();
+    const { fmtDate } = useDateFormat();
     const { categories, getLabelByKey } = useCategories();
     const { showTutorial, tutorialStep } = useOnboarding();
 
@@ -66,6 +69,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ docType = 'invoice' }) => {
     const [dropzoneHover, setDropzoneHover] = useState(false);
     const [droppedFiles, setDroppedFiles] = useState<File[] | undefined>(undefined);
     const [hasPendingEdits, setHasPendingEdits] = useState(false);
+    const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
     const [matchFilter, setMatchFilter] = useState<'all' | 'matched' | 'unmatched'>('all');
     const [matchSummary, setMatchSummary] = useState({ matched: 0, unmatched: 0 });
 
@@ -73,11 +77,11 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ docType = 'invoice' }) => {
 
     const navItems = useMemo(() => [
         { id: 'dashboard', label: t('navDashboard'), icon: <DashboardIcon />, route: '/dashboard' },
-        { id: 'expenses', label: t('navExpenses'), icon: <ExpenseIcon />, route: '/invoices', dataTutorial: 'expenses-nav' },
-        { id: 'income', label: t('navIncome'), icon: <IncomeIcon />, route: '/income' },
-        { id: 'files', label: t('navFiles'), icon: <FilesIcon />, route: '/files' },
-        { id: 'bank-statements', label: t('navBankStatements'), icon: <BankIcon />, route: '/bank-statements' },
         { id: 'reconciliation', label: t('navReconciliation'), icon: <ReconciliationIcon />, route: '/reconciliation' },
+        { id: 'bank-statements', label: t('navBankStatements'), icon: <BankIcon />, route: '/bank-statements' },
+        { id: 'expenses', label: t('navExpenses'), icon: <ExpenseIcon />, route: '/invoices', dataTutorial: 'expenses-nav' },
+        { id: 'revenue', label: t('navRevenue'), icon: <RevenueIcon />, route: '/revenue' },
+        { id: 'files', label: t('navFiles'), icon: <FilesIcon />, route: '/files' },
         { id: 'trash', label: t('navTrash'), icon: <TrashIcon />, route: '/trash' },
         { id: 'sep', label: '', icon: null, isSeparator: true },
         { id: 'settings', label: t('navSettings'), icon: <SettingsIcon />, route: '/settings', dataTutorial: 'settings-nav' },
@@ -266,7 +270,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ docType = 'invoice' }) => {
         fetchData({ page: 1, limit: pagination.limit, _matchFilter: f });
     }, [fetchData, pagination.limit]);
 
-    const columns = useMemo(() => getInvoiceColumns(formatCurrency, t, displayCurrency, categories, getLabelByKey), [t, displayCurrency, categories, getLabelByKey]);
+    const columns = useMemo(() => getInvoiceColumns(formatCurrency, t, displayCurrency, categories, getLabelByKey, fmtDate), [t, displayCurrency, categories, getLabelByKey, fmtDate]);
 
     const handleSaveChanges = useCallback(async (changes: Record<string, Record<string, any>>) => {
         try {
@@ -282,7 +286,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ docType = 'invoice' }) => {
     }, [fetchData, pagination]);
 
     const handleView = useCallback(() => {
-        const base = docType === 'income' ? '/income' : '/invoices';
+        const base = docType === 'income' ? '/revenue' : '/invoices';
         if (selectedIds.length === 1) navigate(`${base}/${selectedIds[0]}`);
     }, [selectedIds, navigate, docType]);
 
@@ -415,23 +419,35 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ docType = 'invoice' }) => {
 
     const topContent = (
         <>
-            <div
-                className={`upload-dropzone${dropzoneHover ? ' upload-dropzone--hover' : ''}`}
-                data-tutorial="upload-btn"
-                onDragOver={handleDropzoneDragOver}
-                onDragLeave={handleDropzoneDragLeave}
-                onDrop={handleDropzoneDrop}
-                onClick={handleDropzoneClick}
-            >
-                <span className="upload-dropzone__icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <line x1="12" y1="5" x2="12" y2="19" />
-                        <line x1="5" y1="12" x2="19" y2="12" />
+            <div className="upload-row">
+                <div
+                    className={`upload-dropzone${dropzoneHover ? ' upload-dropzone--hover' : ''}`}
+                    data-tutorial="upload-btn"
+                    onDragOver={handleDropzoneDragOver}
+                    onDragLeave={handleDropzoneDragLeave}
+                    onDrop={handleDropzoneDrop}
+                    onClick={handleDropzoneClick}
+                >
+                    <span className="upload-dropzone__icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                    </span>
+                    <span className="upload-dropzone__text">
+                        {dropzoneHover ? t('dropzoneInlineHover') : t('dropzoneInline')}
+                    </span>
+                </div>
+                <button
+                    className="manual-entry-btn"
+                    onClick={() => setIsManualEntryOpen(true)}
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                     </svg>
-                </span>
-                <span className="upload-dropzone__text">
-                    {dropzoneHover ? t('dropzoneInlineHover') : t('dropzoneInline')}
-                </span>
+                    {t('manualEntry')}
+                </button>
             </div>
             {renderDocBanner(processingDocs, '', 'processingCount',
                 d => d.ocr_status === 'processing' ? t('statusProcessing') : t('statusPending'),
@@ -494,8 +510,8 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ docType = 'invoice' }) => {
         <>
             <DragDropOverlay onDrop={handleGlobalDrop} label={t('dropzoneInlineHover')} />
             <DataDashboard
-                title={docType === 'income' ? t('incomeTitle') : t('expensesTitle')}
-                pageDescription={docType === 'income' ? t('incomeDescription') : t('expensesDescription')}
+                title={docType === 'income' ? t('revenueTitle') : t('expensesTitle')}
+                pageDescription={docType === 'income' ? t('revenueDescription') : t('expensesDescription')}
                 collection="invoices_v3"
                 data={displayData}
                 columns={columns}
@@ -520,6 +536,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ docType = 'invoice' }) => {
             />
             <InvoiceExportModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} onExport={handleExportConfirm} isLoading={isExporting} />
             <BulkUploadModal isOpen={isUploadModalOpen} onClose={() => { setIsUploadModalOpen(false); setDroppedFiles(undefined); }} onUploadComplete={() => fetchData({ page: 1, limit: 20 })} initialFiles={droppedFiles} docType={docType} />
+            <ManualEntryModal isOpen={isManualEntryOpen} onClose={() => setIsManualEntryOpen(false)} onCreated={() => fetchData({ page: 1, limit: 20 })} docType={docType} />
             <ConfirmModal
                 isOpen={isBlocked}
                 title={t('unsavedTitle')}

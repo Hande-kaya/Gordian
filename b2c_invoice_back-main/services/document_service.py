@@ -68,11 +68,16 @@ class DocumentService:
     def get_documents(
         self, company_id: str, doc_type: str = None,
         page: int = 1, page_size: int = 20,
-        match_status: str = None
+        match_status: str = None, search: str = None,
+        filter_date: str = None,
+        filter_amount: str = None, filter_currency: str = None,
+        filter_supplier: str = None,
     ) -> dict:
         """Get paginated documents. Hides parent containers.
 
         match_status: 'matched' | 'unmatched' | None (all)
+        search: general search across filename, vendor, supplier, invoice_number
+        filter_*: column-level filters (each becomes a $regex condition)
         """
         db = self._get_db()
 
@@ -83,6 +88,55 @@ class DocumentService:
         }
         if doc_type:
             query['type'] = doc_type
+
+        # General search (top search bar)
+        if search:
+            search_regex = {'$regex': search, '$options': 'i'}
+            query['$or'] = [
+                {'filename': search_regex},
+                {'extracted_data.vendor.name': search_regex},
+                {'extracted_data.supplier_name': search_regex},
+                {'extracted_data.invoice_number': search_regex},
+            ]
+
+        # Column-level filters (each added as $and condition)
+        and_conditions = []
+        if filter_date:
+            and_conditions.append({
+                'extracted_data.invoice_date': {'$regex': filter_date, '$options': 'i'}
+            })
+        if filter_amount:
+            and_conditions.append({
+                '$expr': {
+                    '$regexMatch': {
+                        'input': {
+                            '$toString': {
+                                '$ifNull': ['$extracted_data.financials.total_amount',
+                                            {'$ifNull': ['$extracted_data.total_amount', '']}]
+                            }
+                        },
+                        'regex': filter_amount,
+                    }
+                }
+            })
+        if filter_currency:
+            r = {'$regex': filter_currency, '$options': 'i'}
+            and_conditions.append({
+                '$or': [
+                    {'extracted_data.financials.currency': r},
+                    {'extracted_data.currency': r},
+                ]
+            })
+        if filter_supplier:
+            r = {'$regex': filter_supplier, '$options': 'i'}
+            and_conditions.append({
+                '$or': [
+                    {'extracted_data.supplier_name': r},
+                    {'extracted_data.vendor.name': r},
+                ]
+            })
+        if and_conditions:
+            query.setdefault('$and', []).extend(and_conditions)
 
         # Match status filtering: restrict by document IDs in reconciliation_matches
         matched_ids = None
@@ -300,6 +354,45 @@ class DocumentService:
         except Exception as e:
             logger.error(f"Upload error: {e}")
             return None
+
+    def create_manual_document(
+        self, doc_type: str, user_id: str, company_id: str,
+        extracted_data: dict, filename: str = None
+    ) -> dict:
+        """Create a document manually (no file upload, no OCR)."""
+        db = self._get_db()
+
+        if doc_type not in ('invoice', 'income', 'bank-statement'):
+            raise ValueError('Type must be invoice, income, or bank-statement')
+
+        now = datetime.utcnow()
+        auto_filename = filename or f'manual_{doc_type}_{now.strftime("%Y%m%d_%H%M%S")}'
+
+        # Build the document
+        doc = {
+            'company_id': ObjectId(company_id),
+            'user_id': ObjectId(user_id),
+            'type': doc_type,
+            'filename': auto_filename,
+            'file_size': 0,
+            'file_ref': None,
+            'mime_type': None,
+            'ocr_status': 'completed',
+            'extraction_status': 'completed',
+            'extracted_data': extracted_data,
+            'created_at': now,
+            'updated_at': now,
+        }
+
+        # Extract expense_category to top-level if present
+        if extracted_data.get('expense_category'):
+            doc['expense_category'] = extracted_data['expense_category']
+
+        result = db.documents.insert_one(doc)
+        doc['_id'] = result.inserted_id
+        logger.info(f"Manual document created: {auto_filename} type={doc_type}")
+
+        return self._transform_document(doc)
 
     def _run_excel_extraction(
         self, document_id: str, file_ref_str: str,

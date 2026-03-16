@@ -12,7 +12,7 @@ import type { NavItem } from '../../../shared/components';
 import { useLang } from '../../../shared/i18n';
 import { useAuth } from '../../../context/AuthContext';
 import { guardNavigation } from '../../../shared/hooks/useUnsavedChanges';
-import { DashboardIcon, ExpenseIcon, IncomeIcon, BankIcon, ReconciliationIcon, TrashIcon, FilesIcon, SettingsIcon } from '../../../shared/icons/NavIcons';
+import { DashboardIcon, ExpenseIcon, RevenueIcon, BankIcon, ReconciliationIcon, TrashIcon, FilesIcon, SettingsIcon } from '../../../shared/icons/NavIcons';
 import './Layout.scss';
 
 interface LayoutProps {
@@ -34,11 +34,11 @@ const Layout: React.FC<LayoutProps> = ({ children, pageTitle, pageDescription, h
 
     const navItems: NavItem[] = [
         { id: 'dashboard', label: t('navDashboard'), icon: <DashboardIcon />, route: '/dashboard' },
-        { id: 'expenses', label: t('navExpenses'), icon: <ExpenseIcon />, route: '/invoices', dataTutorial: 'expenses-nav' },
-        { id: 'income', label: t('navIncome'), icon: <IncomeIcon />, route: '/income' },
-        { id: 'files', label: t('navFiles'), icon: <FilesIcon />, route: '/files' },
-        { id: 'bank-statements', label: t('navBankStatements'), icon: <BankIcon />, route: '/bank-statements' },
         { id: 'reconciliation', label: t('navReconciliation'), icon: <ReconciliationIcon />, route: '/reconciliation' },
+        { id: 'bank-statements', label: t('navBankStatements'), icon: <BankIcon />, route: '/bank-statements' },
+        { id: 'expenses', label: t('navExpenses'), icon: <ExpenseIcon />, route: '/invoices', dataTutorial: 'expenses-nav' },
+        { id: 'revenue', label: t('navRevenue'), icon: <RevenueIcon />, route: '/revenue' },
+        { id: 'files', label: t('navFiles'), icon: <FilesIcon />, route: '/files' },
         { id: 'trash', label: t('navTrash'), icon: <TrashIcon />, route: '/trash' },
         { id: 'sep', label: '', icon: null, isSeparator: true },
         { id: 'settings', label: t('navSettings'), icon: <SettingsIcon />, route: '/settings', dataTutorial: 'settings-nav' },

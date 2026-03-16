@@ -31,7 +31,6 @@ const authFetch = async (endpoint: string, body: any, method = 'POST'): Promise<
             body: JSON.stringify(body),
         });
         const result = await response.json();
-        // Store token from response body (cross-domain fallback)
         if (result.access_token) {
             localStorage.setItem('access_token', result.access_token);
         }
@@ -135,8 +134,11 @@ export const authApi = {
     removeProfilePhoto: () =>
         authFetch('/api/auth/profile-photo', { photo: null }),
 
-    updatePreferences: (prefs: { theme?: string; language?: string; onboarding_completed?: boolean }) =>
+    updatePreferences: (prefs: { theme?: string; language?: string; onboarding_completed?: boolean; date_format?: string }) =>
         authFetch('/api/auth/preferences', prefs, 'PATCH'),
+
+    deleteAccount: () =>
+        authFetch('/api/auth/account', { confirmation: 'delete' }, 'DELETE'),
 };
 
 export default authApi;

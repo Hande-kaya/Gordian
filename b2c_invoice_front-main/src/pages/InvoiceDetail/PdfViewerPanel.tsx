@@ -313,6 +313,9 @@ const PdfViewerPanel: React.FC<PdfViewerPanelProps> = ({
 
     // ---- Image ----
     if (isImageFile(filename)) {
+        if (error) {
+            return <div className="pdf-viewer-panel"><div className="pdf-viewer-panel__empty" /></div>;
+        }
         return (
             <div className="pdf-viewer-panel">
                 <div className="pdf-viewer-panel__zoom-bar">
@@ -333,7 +336,7 @@ const PdfViewerPanel: React.FC<PdfViewerPanelProps> = ({
                             src={imageBlobUrl}
                             alt={filename}
                             style={{ width: BASE_WIDTH * scale, maxWidth: 'none', display: 'block', margin: '0 auto' }}
-                            onError={() => setError(t('imageLoadError'))}
+                            onError={() => setError('image_error')}
                         />
                     ) : (
                         <div className="pdf-viewer-panel__loading">{t('pdfLoading')}</div>
@@ -343,11 +346,11 @@ const PdfViewerPanel: React.FC<PdfViewerPanelProps> = ({
         );
     }
 
-    // ---- Error ----
+    // ---- Error: show empty panel instead of error message ----
     if (error) {
         return (
             <div className="pdf-viewer-panel">
-                <div className="pdf-viewer-panel__error">{error}</div>
+                <div className="pdf-viewer-panel__empty" />
             </div>
         );
     }

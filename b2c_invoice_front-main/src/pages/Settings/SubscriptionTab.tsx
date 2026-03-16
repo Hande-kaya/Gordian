@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLang } from '../../shared/i18n';
+import { useDateFormat } from '../../context/DateFormatContext';
 import { billingApi, BillingTransaction } from '../../services/billingApi';
 import './Billing.scss';
 
@@ -17,6 +18,7 @@ const BASE_REGEN = 20;
 
 const SubscriptionTab: React.FC<Props> = ({ refreshKey }) => {
     const { t } = useLang();
+    const { fmtDate } = useDateFormat();
     const [amount, setAmount] = useState<string>('5');
     const [buying, setBuying] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -62,11 +64,7 @@ const SubscriptionTab: React.FC<Props> = ({ refreshKey }) => {
         }
     };
 
-    const formatDate = (iso: string) => {
-        try {
-            return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-        } catch { return iso; }
-    };
+    const formatDate = (iso: string) => fmtDate(iso);
 
     const formatAmt = (cents: number, currency: string) => {
         const a = (cents / 100).toFixed(2);

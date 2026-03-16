@@ -9,6 +9,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/layout/Layout';
 import { useLang } from '../../shared/i18n';
+import { useDateFormat } from '../../context/DateFormatContext';
 import documentApi, { DocumentItem } from '../../services/documentApi';
 import './Trash.scss';
 
@@ -18,7 +19,7 @@ type TrashTab = 'invoice' | 'income' | 'bank-statement';
 
 const TRASH_FOLDERS: { key: TrashTab; label: string; color: string }[] = [
     { key: 'invoice', label: 'trashTabExpenses', color: '#3b82f6' },
-    { key: 'income', label: 'trashTabIncome', color: '#10b981' },
+    { key: 'income', label: 'trashTabRevenue', color: '#10b981' },
     { key: 'bank-statement', label: 'trashTabBankStatements', color: '#8b5cf6' },
 ];
 
@@ -41,6 +42,7 @@ const FolderIcon: React.FC<{ color: string; active: boolean }> = ({ color, activ
 
 const Trash: React.FC = () => {
     const { t } = useLang();
+    const { fmtDate } = useDateFormat();
     const [activeTab, setActiveTab] = useState<TrashTab>('invoice');
     const [data, setData] = useState<DocumentItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -304,7 +306,7 @@ const Trash: React.FC = () => {
                                                 {amount && <span className="trash-card__amount">{formatCurrency(amount, currency)}</span>}
                                             </div>
                                             <div className="trash-card__date">
-                                                {doc.deleted_at ? new Date(doc.deleted_at).toLocaleDateString('tr-TR') : '-'}
+                                                {fmtDate(doc.deleted_at)}
                                             </div>
                                         </div>
                                         <div className="trash-card__action">

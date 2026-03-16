@@ -57,9 +57,9 @@ export const dashboardTranslations: Translations = {
         navBankStatements: 'Banka Ekstreleri',
 
         dashboardExpenses: 'Giderler',
-        dashboardIncome: 'Gelirler',
+        dashboardRevenue: 'Gelirler',
         dashboardInvoices: 'Faturalar',
-        totalIncome: 'Toplam Gelir',
+        totalRevenue: 'Toplam Gelir',
 
         // Bank dashboard
         bankTotalDebits: 'Toplam Çıkış (Borç)',
@@ -71,11 +71,15 @@ export const dashboardTranslations: Translations = {
         bankTotalTransactions: 'Toplam İşlem',
         bankMatchRate: 'Eşleşme Oranı',
         bankNoData: 'Bu dönem için banka işlemi bulunamadı',
+        bankTxDetail: 'İşlem Detayı',
+        bankNoMatchFound: 'Eşleşen döküman bulunamadı',
+        bankStatementPreview: 'Banka Ekstresi',
+        bankMatchedDocument: 'Eşleşen Döküman',
     },
     en: {
         // Page
         dashboardTitle: 'Dashboard',
-        dashboardDescription: 'Expense and Income Analytics',
+        dashboardDescription: 'Expense and Revenue Analytics',
 
         // Stats
         totalExpenses: 'Total Expenses',
@@ -122,9 +126,9 @@ export const dashboardTranslations: Translations = {
         navBankStatements: 'Bank Statements',
 
         dashboardExpenses: 'Expenses',
-        dashboardIncome: 'Income',
+        dashboardRevenue: 'Revenue',
         dashboardInvoices: 'Invoices',
-        totalIncome: 'Total Income',
+        totalRevenue: 'Total Revenue',
 
         // Bank dashboard
         bankTotalDebits: 'Total Outgoing (Debits)',
@@ -136,6 +140,10 @@ export const dashboardTranslations: Translations = {
         bankTotalTransactions: 'Total Transactions',
         bankMatchRate: 'Match Rate',
         bankNoData: 'No bank transactions found for this period',
+        bankTxDetail: 'Transaction Detail',
+        bankNoMatchFound: 'No matching document found',
+        bankStatementPreview: 'Bank Statement',
+        bankMatchedDocument: 'Matched Document',
     },
     de: {
         // Page
@@ -187,9 +195,9 @@ export const dashboardTranslations: Translations = {
         navBankStatements: 'Kontoauszüge',
 
         dashboardExpenses: 'Ausgaben',
-        dashboardIncome: 'Einnahmen',
+        dashboardRevenue: 'Einnahmen',
         dashboardInvoices: 'Rechnungen',
-        totalIncome: 'Gesamteinnahmen',
+        totalRevenue: 'Gesamteinnahmen',
 
         // Bank dashboard
         bankTotalDebits: 'Gesamte Ausgänge (Soll)',
@@ -201,5 +209,9 @@ export const dashboardTranslations: Translations = {
         bankTotalTransactions: 'Gesamttransaktionen',
         bankMatchRate: 'Zuordnungsrate',
         bankNoData: 'Keine Banktransaktionen für diesen Zeitraum',
+        bankTxDetail: 'Transaktionsdetail',
+        bankNoMatchFound: 'Kein passendes Dokument gefunden',
+        bankStatementPreview: 'Kontoauszug',
+        bankMatchedDocument: 'Zugeordnetes Dokument',
     },
 };

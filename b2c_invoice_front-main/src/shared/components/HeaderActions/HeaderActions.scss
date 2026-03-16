@@ -1,89 +1,98 @@
 // Header Actions Component Styles
 // ================================
-// Matches RFQ project design system
+// Recon-inspired individual outlined buttons with spacing
 @import '../../styles/variables.scss';
 
 .header-actions,
 .admin-v2-header-actions {
   display: flex !important;
   align-items: center !important;
-  gap: 0 !important;
-  flex-wrap: nowrap !important;
-  border: 1px solid $color-border-dark !important;
-  border-radius: $radius-sm !important;
-  background-color: $color-bg-white !important;
-  overflow: visible !important;
-  white-space: nowrap !important;
-  position: relative !important;
-  z-index: 1100 !important; // Above table header (1000-1001)
+  justify-content: space-between !important;
+  gap: $spacing-sm !important;
+  flex-wrap: wrap !important;
+  width: 100% !important;
 
-  .action-button {
-    padding: $spacing-sm $spacing-base !important;
-    border: none !important;
-    border-right: 1px solid $color-border-dark !important;
-    border-radius: 0 !important;
-    background-color: $color-bg-hover !important;
-    color: $color-text-primary !important;
-    font-size: $font-size-base !important;
-    font-weight: $font-weight-medium !important;
-    cursor: pointer !important;
-    transition: all $transition-fast !important;
-    white-space: nowrap !important;
+  .header-actions__left {
     display: flex !important;
     align-items: center !important;
-    gap: $spacing-xs !important;
+    gap: $spacing-sm !important;
+    flex-wrap: wrap !important;
+  }
+
+  .header-actions__right {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .action-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    padding: 5px 12px !important;
+    border: 1px solid $color-border-dark !important;
+    border-radius: $radius-md !important;
+    background: transparent !important;
+    color: $color-text-secondary !important;
+    font-size: $font-size-sm !important;
+    font-weight: $font-weight-medium !important;
+    cursor: pointer !important;
+    transition: all 0.15s !important;
+    white-space: nowrap !important;
+
+    svg {
+      flex-shrink: 0;
+    }
 
     &:hover:not(:disabled) {
-      background-color: $color-accent-light !important;
-      color: $color-accent-dark !important;
-      border-color: $color-accent !important;
+      background: $color-bg-hover !important;
+      color: $color-text-primary !important;
     }
 
     &:disabled {
-      background-color: $color-bg-primary !important;
-      color: $color-text-muted !important;
+      opacity: 0.4 !important;
       cursor: not-allowed !important;
-    }
-
-    &:last-child {
-      border-right: none !important;
     }
 
     // Button type variations
     &.action-button-primary {
-      background-color: $color-accent !important;
+      background: $color-accent !important;
+      border-color: $color-accent !important;
       color: $color-bg-white !important;
 
       &:hover:not(:disabled) {
-        background-color: $color-accent-dark !important;
+        background: $color-accent-dark !important;
       }
     }
 
     &.action-button-danger {
-      background-color: $color-error !important;
-      color: $color-bg-white !important;
+      background: transparent !important;
+      border-color: $color-error !important;
+      color: $color-error !important;
 
       &:hover:not(:disabled) {
-        background-color: darken($color-error, 10%) !important;
+        background: $color-error-light !important;
       }
     }
 
     &.action-button-secondary {
-      background-color: $color-text-secondary !important;
+      background: $color-text-secondary !important;
+      border-color: $color-text-secondary !important;
       color: $color-bg-white !important;
 
       &:hover:not(:disabled) {
-        background-color: $color-text-primary !important;
+        background: $color-text-primary !important;
       }
     }
 
     &.action-button-success {
-      background-color: $color-success !important;
+      background: $color-success !important;
+      border-color: $color-success !important;
       color: $color-bg-white !important;
 
       &:hover:not(:disabled) {
-        background-color: darken($color-success, 10%) !important;
-        color: $color-bg-white !important;
+        background: darken($color-success, 10%) !important;
       }
     }
   }
@@ -94,58 +103,61 @@
 
   .show-dropdown-container {
     position: relative !important;
-    z-index: 1200 !important; // Above table header
+    z-index: 1200 !important;
 
     .show-dropdown-button {
-      display: flex !important;
+      display: inline-flex !important;
       align-items: center !important;
-      gap: $spacing-xs !important;
+      gap: 5px !important;
     }
 
     .dropdown-arrow {
-      font-size: $font-size-xs !important;
-      color: $color-text-secondary !important;
-      transition: transform $transition-fast !important;
+      font-size: 8px !important;
+      transition: transform 0.15s !important;
+      margin-left: 2px !important;
+
+      &--open {
+        transform: rotate(180deg) !important;
+      }
     }
 
     .show-dropdown-menu {
       position: absolute !important;
       top: 100% !important;
-      left: 0 !important;
       right: 0 !important;
-      background-color: $color-bg-white !important;
+      margin-top: 4px !important;
+      background: $color-bg-white !important;
       border: 1px solid $color-border-dark !important;
-      border-top: none !important;
-      border-radius: 0 0 $radius-sm $radius-sm !important;
+      border-radius: $radius-md !important;
       box-shadow: $shadow-md !important;
-      z-index: 9999 !important; // Very high to ensure visibility
-      min-width: 120px !important;
+      z-index: 99999 !important;
+      min-width: 60px !important;
+      overflow: hidden !important;
 
       .dropdown-option {
+        display: block !important;
         width: 100% !important;
-        padding: $spacing-sm $spacing-base !important;
+        padding: 6px 14px !important;
         border: none !important;
-        border-bottom: 1px solid $color-border-light !important;
-        border-radius: 0 !important;
-        background-color: $color-bg-white !important;
+        background: transparent !important;
         color: $color-text-primary !important;
-        font-size: $font-size-base !important;
+        font-size: $font-size-sm !important;
+        font-weight: $font-weight-medium !important;
         text-align: left !important;
         cursor: pointer !important;
-        transition: background-color $transition-fast !important;
+        transition: background 0.1s !important;
 
         &:hover {
-          background-color: $color-bg-hover !important;
+          background: $color-bg-hover !important;
         }
 
         &.selected {
-          background-color: $color-accent-light !important;
-          color: $color-accent-dark !important;
-          font-weight: $font-weight-semibold !important;
-        }
+          background: $color-accent !important;
+          color: $color-bg-white !important;
 
-        &:last-child {
-          border-bottom: none !important;
+          &:hover {
+            background: $color-accent-dark !important;
+          }
         }
       }
     }
@@ -154,24 +166,26 @@
 
 // Standalone button styles (outside the grouped header)
 .header-action-btn {
-  padding: $spacing-sm $spacing-md !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 5px 12px !important;
   border: 1px solid $color-border-dark !important;
   border-radius: $radius-md !important;
-  background: $color-bg-white !important;
-  color: $color-text-primary !important;
+  background: transparent !important;
+  color: $color-text-secondary !important;
   font-size: $font-size-sm !important;
   font-weight: $font-weight-medium !important;
   cursor: pointer !important;
-  transition: all $transition-fast !important;
+  transition: all 0.15s !important;
   white-space: nowrap !important;
 
   &:hover:not(:disabled) {
     background: $color-bg-hover !important;
-    border-color: $color-text-muted !important;
   }
 
   &:disabled {
-    opacity: 0.5 !important;
+    opacity: 0.4 !important;
     cursor: not-allowed !important;
   }
 

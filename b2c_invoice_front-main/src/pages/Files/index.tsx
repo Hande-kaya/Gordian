@@ -18,7 +18,7 @@ type FilesTab = 'invoice' | 'income' | 'bank-statement';
 
 const FILES_FOLDERS: { key: FilesTab; label: string; color: string }[] = [
     { key: 'invoice', label: 'filesFolderExpenses', color: '#3b82f6' },
-    { key: 'income', label: 'filesFolderIncome', color: '#10b981' },
+    { key: 'income', label: 'filesFolderRevenue', color: '#10b981' },
     { key: 'bank-statement', label: 'filesFolderStatements', color: '#8b5cf6' },
 ];
 

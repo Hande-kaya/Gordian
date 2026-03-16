@@ -24,11 +24,6 @@ const parseDate = (value: string): Date | null => {
     return isNaN(d.getTime()) ? null : d;
 };
 
-const formatDateValue = (value: string): string => {
-    if (!value) return '-';
-    const d = parseDate(value);
-    return d ? d.toLocaleDateString('tr-TR') : value;
-};
 
 /** Convert any date string to YYYY-MM-DD for <input type="date"> */
 const toIsoDate = (value: string): string => {
@@ -46,8 +41,15 @@ export function getInvoiceColumns(
     t: (key: string) => string,
     targetCurrency?: string,
     categories?: ExpenseCategory[],
-    getLabelByKey?: (key: string) => string
+    getLabelByKey?: (key: string) => string,
+    fmtDate?: (value: string | Date | null | undefined) => string,
 ): Column[] {
+    const formatDateValue = (value: string): string => {
+        if (!value) return '-';
+        if (fmtDate) return fmtDate(value);
+        const d = parseDate(value);
+        return d ? d.toLocaleDateString('tr-TR') : value;
+    };
     return [
         // === Visible columns (user-requested order) ===
         {

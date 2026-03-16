@@ -11,7 +11,7 @@ import React from 'react';
 export interface FieldDef {
     key: string;
     label: string;
-    type?: 'text' | 'number' | 'select';
+    type?: 'text' | 'number' | 'select' | 'date';
     options?: string[];
 }
 
@@ -22,10 +22,12 @@ interface FieldSectionProps {
     onChange: (key: string, value: any) => void;
     readOnly?: boolean;
     headerAction?: React.ReactNode;
+    fmtDate?: (value: string | Date | null | undefined) => string;
 }
 
-const formatValue = (val: any, type?: string): string => {
+const formatValue = (val: any, type?: string, fmtDate?: (v: any) => string): string => {
     if (val == null || val === '') return '-';
+    if (type === 'date' && fmtDate) return fmtDate(val);
     if (type === 'number' && typeof val === 'number') {
         return val.toLocaleString('tr-TR', { minimumFractionDigits: 2 });
     }
@@ -33,7 +35,7 @@ const formatValue = (val: any, type?: string): string => {
 };
 
 const FieldSection: React.FC<FieldSectionProps> = ({
-    title, fields, values, onChange, readOnly = false, headerAction
+    title, fields, values, onChange, readOnly = false, headerAction, fmtDate
 }) => {
     // Filter out empty fields in readOnly mode for compactness
     const visibleFields = readOnly
@@ -54,7 +56,7 @@ const FieldSection: React.FC<FieldSectionProps> = ({
                         <label className="field-section__label">{f.label}</label>
                         {readOnly ? (
                             <span className="field-section__value">
-                                {formatValue(values[f.key], f.type)}
+                                {formatValue(values[f.key], f.type, fmtDate)}
                             </span>
                         ) : f.type === 'select' && f.options ? (
                             <select

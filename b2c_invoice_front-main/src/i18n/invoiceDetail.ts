@@ -80,6 +80,19 @@ export const invoiceDetailTranslations: Translations = {
         swapDates: 'GG/AA \u21C4 AA/GG',
         swapDatesTitle: 'Gün/Ay yerini değiştir',
 
+        // Revenue detail
+        revenueDetailTitle: 'Gelir Detayı',
+
+        // Format Settings
+        sectionFormatSettings: 'Format Ayarları',
+        formatDateLabel: 'Tarih Formatı',
+        formatDateDesc: 'Tarihler yanlış okunduysa düzeltin. Örneğin 01.02 yerine 02.01 olmalıysa.',
+        formatCurrencyLabel: 'Para Birimi',
+        formatCurrencyDesc: 'Para birimi yanlış okunduysa doğru olanı seçin.',
+
+        // Merged document details
+        sectionDocumentDetails: 'Belge Detayları',
+
         // Nav
         navExpenses: 'Harcamalar',
         navBankStatements: 'Banka Ekstreleri',
@@ -157,6 +170,19 @@ export const invoiceDetailTranslations: Translations = {
         swapDates: 'DD/MM \u21C4 MM/DD',
         swapDatesTitle: 'Swap day/month',
 
+        // Revenue detail
+        revenueDetailTitle: 'Revenue Detail',
+
+        // Format Settings
+        sectionFormatSettings: 'Format Settings',
+        formatDateLabel: 'Date Format',
+        formatDateDesc: 'Fix if dates were read incorrectly. For example, if 01.02 should be 02.01.',
+        formatCurrencyLabel: 'Currency',
+        formatCurrencyDesc: 'Change the currency if it was read incorrectly.',
+
+        // Merged document details
+        sectionDocumentDetails: 'Document Details',
+
         // Nav
         navExpenses: 'Expenses',
         navBankStatements: 'Bank Statements',
@@ -233,6 +259,19 @@ export const invoiceDetailTranslations: Translations = {
         // Date swap
         swapDates: 'TT/MM \u21C4 MM/TT',
         swapDatesTitle: 'Tag/Monat tauschen',
+
+        // Revenue detail
+        revenueDetailTitle: 'Einnahmendetail',
+
+        // Format Settings
+        sectionFormatSettings: 'Formateinstellungen',
+        formatDateLabel: 'Datumsformat',
+        formatDateDesc: 'Korrigieren Sie, falls Datumsangaben falsch gelesen wurden. Z.B. wenn 01.02 eigentlich 02.01 sein sollte.',
+        formatCurrencyLabel: 'Währung',
+        formatCurrencyDesc: 'Ändern Sie die Währung, falls sie falsch erkannt wurde.',
+
+        // Merged document details
+        sectionDocumentDetails: 'Dokumentdetails',
 
         // Nav
         navExpenses: 'Ausgaben',

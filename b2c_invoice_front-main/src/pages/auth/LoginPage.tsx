@@ -43,7 +43,7 @@ const LoginPage: React.FC = () => {
         setLoading(true);
         const result = await login(email, password);
         if (result.success) {
-            navigate('/dashboard');
+            navigate('/reconciliation');
         } else {
             if (result.code === 'NOT_VERIFIED') {
                 navigate(`/verify?email=${encodeURIComponent(email)}`);

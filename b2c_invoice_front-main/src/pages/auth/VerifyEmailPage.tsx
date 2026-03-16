@@ -68,7 +68,7 @@ const VerifyEmailPage: React.FC = () => {
             // Cookie was set by backend — validate session
             const ok = await checkSession();
             if (ok) {
-                navigate('/dashboard');
+                navigate('/reconciliation');
             } else {
                 setError(t('verifySuccessLoginFailed'));
                 setTimeout(() => navigate('/login'), 2000);

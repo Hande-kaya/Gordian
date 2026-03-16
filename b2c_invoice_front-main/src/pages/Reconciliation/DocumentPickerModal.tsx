@@ -22,7 +22,7 @@ import './DocumentPickerModal.scss';
 interface DocumentPickerModalProps {
     transaction: UnifiedTransaction;
     expenses: DocumentItem[];
-    incomes: DocumentItem[];
+    revenues: DocumentItem[];
     linkedDocIds?: Set<string>;
     onSelect: (documentId: string) => Promise<boolean>;
     onClose: () => void;
@@ -101,7 +101,7 @@ function getScoreLevel(score: number): 'high' | 'medium' | 'low' {
 }
 
 const DocumentPickerModal: React.FC<DocumentPickerModalProps> = ({
-    transaction, expenses, incomes, linkedDocIds, onSelect, onClose,
+    transaction, expenses, revenues, linkedDocIds, onSelect, onClose,
 }) => {
     const { t } = useLang();
     const [search, setSearch] = useState('');
@@ -131,10 +131,10 @@ const DocumentPickerModal: React.FC<DocumentPickerModalProps> = ({
     const txDate = parseDocDate(transaction.date);
     const txCurrency = transaction.currency || 'TRY';
 
-    // Pick relevant docs: debit -> expenses, credit -> incomes
+    // Pick relevant docs: debit -> expenses, credit -> revenues
     // Exclude docs already linked to OTHER transactions
     const candidates = useMemo(() => {
-        const docs = isCredit ? incomes : expenses;
+        const docs = isCredit ? revenues : expenses;
         const ownLinkedIds = new Set(
             (transaction.matches || [])
                 .map(m => m.document_ref?.document_id)
@@ -145,7 +145,7 @@ const DocumentPickerModal: React.FC<DocumentPickerModalProps> = ({
             if (linkedDocIds?.has(d.id) && !ownLinkedIds.has(d.id)) return false;
             return true;
         });
-    }, [isCredit, expenses, incomes, linkedDocIds, transaction.matches]);
+    }, [isCredit, expenses, revenues, linkedDocIds, transaction.matches]);
 
     // Filter by search + date proximity (<=1 month) + sort by score
     const filtered = useMemo(() => {

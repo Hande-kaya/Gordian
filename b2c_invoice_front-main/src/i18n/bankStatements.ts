@@ -44,6 +44,13 @@ export const bankStatementsTranslations: Translations = {
         txCredit: 'Gelen',
         txBalance: 'Bakiye',
         txTotal: 'Toplam',
+        // Format settings
+        sectionFormatSettings: 'Format Ayarları',
+        formatDateLabel: 'Tarih Formatı',
+        formatDateDesc: 'Tarihler yanlış okunduysa düzeltin. Örneğin 01.02 yerine 02.01 olmalıysa.',
+        formatCurrencyLabel: 'Para Birimi',
+        formatCurrencyDesc: 'Para birimi yanlış okunduysa doğru olanı seçin.',
+        sectionStatementDetails: 'Ekstre Detayları',
         // Actions
         uploadStatement: 'Ekstre Yükle',
         noTransactions: 'Bu ekstrede işlem bulunamadı.',
@@ -90,6 +97,13 @@ export const bankStatementsTranslations: Translations = {
         txCredit: 'Incoming',
         txBalance: 'Balance',
         txTotal: 'Total',
+        // Format settings
+        sectionFormatSettings: 'Format Settings',
+        formatDateLabel: 'Date Format',
+        formatDateDesc: 'Fix if dates were read incorrectly. For example, if 01.02 should be 02.01.',
+        formatCurrencyLabel: 'Currency',
+        formatCurrencyDesc: 'Change the currency if it was read incorrectly.',
+        sectionStatementDetails: 'Statement Details',
         // Actions
         uploadStatement: 'Upload Statement',
         noTransactions: 'No transactions found in this statement.',
@@ -136,6 +150,13 @@ export const bankStatementsTranslations: Translations = {
         txCredit: 'Eingang',
         txBalance: 'Saldo',
         txTotal: 'Gesamt',
+        // Format settings
+        sectionFormatSettings: 'Formateinstellungen',
+        formatDateLabel: 'Datumsformat',
+        formatDateDesc: 'Korrigieren Sie, falls Datumsangaben falsch gelesen wurden. Z.B. wenn 01.02 eigentlich 02.01 sein sollte.',
+        formatCurrencyLabel: 'Währung',
+        formatCurrencyDesc: 'Ändern Sie die Währung, falls sie falsch erkannt wurde.',
+        sectionStatementDetails: 'Auszugsdetails',
         // Actions
         uploadStatement: 'Auszug hochladen',
         noTransactions: 'Keine Transaktionen in diesem Auszug gefunden.',

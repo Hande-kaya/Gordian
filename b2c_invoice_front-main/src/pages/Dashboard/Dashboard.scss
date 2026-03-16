@@ -217,41 +217,74 @@
         min-width: 70px;
     }
 
-    // Doc type toggle (expense/income)
-    &__doc-type-toggle {
+    // Tab panel — tabs sit on top of content card
+    &__tab-panel {
         display: flex;
-        gap: 2px;
-        background: var(--bg-primary);
-        border-radius: $radius-base;
-        padding: 2px;
-        border: 1px solid var(--border-color);
+        flex-direction: column;
     }
 
-    &__doc-type-btn {
-        padding: $spacing-sm $spacing-lg;
-        border: none;
+    &__tab-bar {
+        display: flex;
+        position: relative;
+        z-index: 2;
+    }
+
+    &__tab {
+        padding: 10px 24px;
+        border: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color);
         background: transparent;
-        border-radius: $radius-md;
+        border-radius: 10px 10px 0 0;
         font-size: $font-size-sm;
         font-weight: $font-weight-medium;
         color: var(--text-secondary);
         cursor: pointer;
         transition: all $transition-fast;
         white-space: nowrap;
+        position: relative;
+        margin-right: -1px;
+        margin-bottom: -1px; // overlap content border
 
-        &:hover {
+        &:hover:not(&--active) {
             color: var(--text-primary);
             background: var(--bg-hover);
         }
 
+        // Default active: matches --bg-primary (bank statements)
         &--active {
-            background: var(--bg-white);
+            background: var(--bg-primary);
+            color: var(--text-primary);
             font-weight: $font-weight-semibold;
-            box-shadow: $shadow-sm;
+            border-bottom-color: var(--bg-primary);
         }
+    }
 
-        &--expense { color: var(--pie-color-4); }
-        &--income { color: var(--pie-color-2); }
+    // Default: bank statements — same as page bg
+    &__tab-content {
+        display: flex;
+        flex-direction: column;
+        gap: $spacing-2xl;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 0 0 $radius-xl $radius-xl;
+        padding: $spacing-2xl;
+        position: relative;
+        z-index: 1;
+    }
+
+    // BS active (default): inactive tabs get gray bg
+    &__tab-panel:not(.dashboard__tab-panel--alt) &__tab:not(.dashboard__tab--active) {
+        background: var(--bg-hover);
+    }
+
+    // Invoices tab active — different tone
+    &__tab-panel--alt &__tab--active {
+        background: var(--bg-hover);
+        border-bottom-color: var(--bg-hover);
+    }
+
+    &__tab-panel--alt &__tab-content {
+        background: var(--bg-hover);
     }
 
     // Toolbar (period + filter on same row)
@@ -970,6 +1003,15 @@
         font-weight: $font-weight-semibold;
         color: $color-accent;
         white-space: nowrap;
+    }
+
+    &__match-table-row--clickable {
+        cursor: pointer;
+        transition: background 0.15s ease;
+
+        &:hover {
+            background: var(--bg-hover, rgba(0, 0, 0, 0.04));
+        }
     }
 
     &__match-table-more {

@@ -6,10 +6,11 @@
  * Clicking a match status slice shows a detail table below.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import CategoryPieChart, { PieSlice } from './CategoryPieChart';
 import { UnifiedTransaction } from '../../../services/reconciliationApi';
 import { useLang } from '../../../shared/i18n';
+import DashboardTxModal from './DashboardTxModal';
 
 interface BankPieChartsGridProps {
     bankBreakdown: PieSlice[];
@@ -31,6 +32,18 @@ const BankPieChartsGrid: React.FC<BankPieChartsGridProps> = ({
 }) => {
     const { t } = useLang();
     const [matchFilter, setMatchFilter] = useState<'matched' | 'unmatched' | null>(null);
+    const [selectedTx, setSelectedTx] = useState<UnifiedTransaction | null>(null);
+    const tableSectionRef = useRef<HTMLDivElement>(null);
+
+    // Auto-scroll to table when matchFilter changes
+    useEffect(() => {
+        if (matchFilter && tableSectionRef.current) {
+            // Small delay to allow render before scroll
+            requestAnimationFrame(() => {
+                tableSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        }
+    }, [matchFilter]);
 
     const filteredTxs = useMemo(() => {
         if (!matchFilter) return [];
@@ -99,7 +112,7 @@ const BankPieChartsGrid: React.FC<BankPieChartsGridProps> = ({
 
             {/* Match detail table */}
             {matchFilter && filteredTxs.length > 0 && (
-                <div className="dashboard__section">
+                <div className="dashboard__section" ref={tableSectionRef}>
                     <div className="dashboard__section-header">
                         <h3 className="dashboard__section-title">
                             {matchFilter === 'matched' ? t('bankMatched') : t('bankUnmatched')}
@@ -126,7 +139,11 @@ const BankPieChartsGrid: React.FC<BankPieChartsGridProps> = ({
                             </thead>
                             <tbody>
                                 {filteredTxs.slice(0, 50).map((tx, i) => (
-                                    <tr key={`${tx.statement_id}-${tx.tx_index}-${i}`}>
+                                    <tr
+                                        key={`${tx.statement_id}-${tx.tx_index}-${i}`}
+                                        className="dashboard__match-table-row--clickable"
+                                        onClick={() => setSelectedTx(tx)}
+                                    >
                                         <td className="dashboard__match-table--nowrap">{tx.date}</td>
                                         <td className="dashboard__match-table--nowrap">{tx.bank_name || '—'}</td>
                                         <td className="dashboard__match-table--desc" title={tx.description}>
@@ -164,6 +181,12 @@ const BankPieChartsGrid: React.FC<BankPieChartsGridProps> = ({
                         </div>
                     )}
                 </div>
+            )}
+            {selectedTx && (
+                <DashboardTxModal
+                    transaction={selectedTx}
+                    onClose={() => setSelectedTx(null)}
+                />
             )}
         </>
     );

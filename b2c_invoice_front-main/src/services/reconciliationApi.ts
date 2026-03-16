@@ -36,6 +36,9 @@ export interface ReconciliationMatch {
     };
     status: 'auto' | 'manual' | 'confirmed' | 'rejected';
     source?: 'auto' | 'manual';
+    stale?: boolean;
+    stale_reason?: string;
+    stale_at?: string;
     created_at: string;
 }
 

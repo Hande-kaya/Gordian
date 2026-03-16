@@ -11,7 +11,7 @@ import { useLang } from '../../shared/i18n';
 import { useDashboardStats } from '../../hooks/useDashboardStats';
 import { useBankDashboardStats } from '../../hooks/useBankDashboardStats';
 import { useCategories } from '../../context/CategoryContext';
-import { DISPLAY_CURRENCIES, getPreferredCurrency, setPreferredCurrency } from '../../utils/currency';
+import { DISPLAY_CURRENCIES, getPreferredCurrency, setPreferredCurrency, convertCurrency } from '../../utils/currency';
 import { CurrencySpending } from '../../services/statsApi';
 import SpendingChart from './components/SpendingChart';
 import CategoryChartsGrid from './components/CategoryChartsGrid';
@@ -50,7 +50,7 @@ const Dashboard: React.FC = () => {
     const { getLabelByKey } = useCategories();
 
     // ── View mode toggle ────────────────────────────────────────────────────
-    const [viewMode, setViewMode] = useState<'invoices' | 'bank_statements'>('invoices');
+    const [viewMode, setViewMode] = useState<'invoices' | 'bank_statements'>('bank_statements');
 
     // ── Period state ──────────────────────────────────────────────────────────
     const [period, setPeriod] = useState('90d');
@@ -76,7 +76,7 @@ const Dashboard: React.FC = () => {
     const { data, loading } = useDashboardStats(
         isPreset ? period : 'all', groupBy, apiStartDate, apiEndDate, 'invoice',
     );
-    const { data: incomeData, loading: incomeLoading } = useDashboardStats(
+    const { data: revenueData, loading: revenueLoading } = useDashboardStats(
         isPreset ? period : 'all', groupBy, apiStartDate, apiEndDate, 'income',
     );
 
@@ -174,9 +174,9 @@ const Dashboard: React.FC = () => {
         return result;
     }, [data?.spending_by_date, filteredSpendingByCategory, availableCategories, selectedCurrencies, selectedCategories]);
 
-    const incomeSpendingByDate = useMemo((): CurrencySpending[] =>
-        (incomeData?.spending_by_date ?? []).filter(cs => selectedCurrencies.has(cs.currency)),
-    [incomeData?.spending_by_date, selectedCurrencies]);
+    const revenueSpendingByDate = useMemo((): CurrencySpending[] =>
+        (revenueData?.spending_by_date ?? []).filter(cs => selectedCurrencies.has(cs.currency)),
+    [revenueData?.spending_by_date, selectedCurrencies]);
 
     // ── Bank: currency-filtered chart data ──────────────────────────────────
     const filteredBankDebits = useMemo((): CurrencySpending[] =>
@@ -186,6 +186,20 @@ const Dashboard: React.FC = () => {
     const filteredBankCredits = useMemo((): CurrencySpending[] =>
         bankData.creditsByDate.filter(cs => selectedCurrencies.has(cs.currency)),
     [bankData.creditsByDate, selectedCurrencies]);
+
+    // ── Bank: summary converted to display currency ─────────────────────────
+    const bankSummaryConverted = useMemo(() => {
+        let totalDebits = 0;
+        let totalCredits = 0;
+        for (const tx of bankData.transactions) {
+            if (selectedCurrencies.size > 0 && !selectedCurrencies.has(tx.currency || 'TRY')) continue;
+            const amt = Math.abs(tx.amount);
+            const converted = convertCurrency(amt, tx.currency || 'TRY', displayCurrency) ?? amt;
+            if (tx.type === 'debit') totalDebits += converted;
+            else totalCredits += converted;
+        }
+        return { totalDebits, totalCredits };
+    }, [bankData.transactions, displayCurrency, selectedCurrencies]);
 
     // ── Handlers ──────────────────────────────────────────────────────────────
     const allCurrenciesSelected = availableCurrencies.length > 0
@@ -266,21 +280,23 @@ const Dashboard: React.FC = () => {
         >
             <div className="dashboard">
 
-                {/* ── View Mode Toggle ────────────────────────────────────── */}
-                <div className="dashboard__doc-type-toggle">
-                    <button
-                        className={`dashboard__doc-type-btn ${viewMode === 'invoices' ? 'dashboard__doc-type-btn--active' : ''}`}
-                        onClick={() => setViewMode('invoices')}
-                    >
-                        {t('dashboardInvoices')}
-                    </button>
-                    <button
-                        className={`dashboard__doc-type-btn ${viewMode === 'bank_statements' ? 'dashboard__doc-type-btn--active' : ''}`}
-                        onClick={() => setViewMode('bank_statements')}
-                    >
-                        {t('navBankStatements')}
-                    </button>
-                </div>
+                {/* ── Tab Panel: toggle + content ────────────────────────── */}
+                <div className={`dashboard__tab-panel${viewMode === 'invoices' ? ' dashboard__tab-panel--alt' : ''}`}>
+                    <div className="dashboard__tab-bar">
+                        <button
+                            className={`dashboard__tab ${viewMode === 'bank_statements' ? 'dashboard__tab--active' : ''}`}
+                            onClick={() => setViewMode('bank_statements')}
+                        >
+                            {t('navBankStatements')}
+                        </button>
+                        <button
+                            className={`dashboard__tab ${viewMode === 'invoices' ? 'dashboard__tab--active' : ''}`}
+                            onClick={() => setViewMode('invoices')}
+                        >
+                            {t('dashboardInvoices')}
+                        </button>
+                    </div>
+                    <div className="dashboard__tab-content">
 
                 {/* ── Toolbar ─────────────────────────────────────────────── */}
                 <div className="dashboard__toolbar-v2">
@@ -424,10 +440,10 @@ const Dashboard: React.FC = () => {
                         </div>
 
                         <SpendingChart
-                            data={incomeSpendingByDate}
-                            loading={incomeLoading}
+                            data={revenueSpendingByDate}
+                            loading={revenueLoading}
                             displayCurrency={displayCurrency}
-                            title={t('totalIncome')}
+                            title={t('totalRevenue')}
                         />
 
                         <CategoryChartsGrid
@@ -452,7 +468,7 @@ const Dashboard: React.FC = () => {
                             <div className="dashboard__stat-card dashboard__stat-card--discrepancy">
                                 <div>
                                     <div className="dashboard__stat-value">
-                                        {bankData.summary.totalDebits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        {bankSummaryConverted.totalDebits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {displayCurrency}
                                     </div>
                                     <div className="dashboard__stat-label">{t('bankTotalDebits')}</div>
                                 </div>
@@ -460,7 +476,7 @@ const Dashboard: React.FC = () => {
                             <div className="dashboard__stat-card dashboard__stat-card--matched">
                                 <div>
                                     <div className="dashboard__stat-value">
-                                        {bankData.summary.totalCredits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        {bankSummaryConverted.totalCredits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {displayCurrency}
                                     </div>
                                     <div className="dashboard__stat-label">{t('bankTotalCredits')}</div>
                                 </div>
@@ -503,6 +519,9 @@ const Dashboard: React.FC = () => {
                         />
                     </>
                 )}
+
+                    </div>{/* end tab-content */}
+                </div>{/* end tab-panel */}
             </div>
         </Layout>
     );

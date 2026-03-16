@@ -31,7 +31,7 @@ const SsoCallbackPage: React.FC = () => {
 
     const [status, setStatus] = useState<'loading' | 'completion' | 'error'>('loading');
     const [errorMsg, setErrorMsg] = useState('');
-    const [provider, setProvider] = useState<string>('microsoft');
+    const [provider, setProvider] = useState<string>(() => params.get('provider') || 'google');
 
     // Completion form state
     const [name, setName] = useState('');
@@ -63,7 +63,7 @@ const SsoCallbackPage: React.FC = () => {
             // Validate session
             const ok = await checkSession();
             if (ok) {
-                navigate('/dashboard', { replace: true });
+                navigate('/reconciliation', { replace: true });
             } else {
                 setStatus('error');
                 setErrorMsg(t('ssoSessionFailed'));
@@ -107,7 +107,7 @@ const SsoCallbackPage: React.FC = () => {
             // Validate session
             const ok = await checkSession();
             if (ok) {
-                navigate('/dashboard', { replace: true });
+                navigate('/reconciliation', { replace: true });
                 return;
             }
         }

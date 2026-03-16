@@ -1,10 +1,12 @@
 /**
- * TransactionRow — single <tr> for the MatchingPanel table.
- * Always clickable (opens detail modal). Shows primary filename + "+N" badge for multi-link.
- * Hides confidence badge for manual matches.
+ * TransactionRow — Single unified row for the matching panel table.
+ * Renders all columns in one <tr> with a spacer <td> between bank and match halves.
+ * Left half:  Date | Description | Amount
+ * Right half: Match filename | Vendor | Doc Amount | Doc Date | Confidence | Actions
  */
 import React from 'react';
 import { useLang } from '../../shared/i18n';
+import { useDateFormat } from '../../context/DateFormatContext';
 import { ReconciliationMatch, UnifiedTransaction } from '../../services/reconciliationApi';
 import {
     fmtCurrency,
@@ -13,7 +15,7 @@ import {
     getMatches,
 } from './matchingPanelUtils';
 
-interface TransactionRowProps {
+export interface TransactionRowProps {
     tx: UnifiedTransaction;
     onOpenDetail: (tx: UnifiedTransaction) => void;
     onLink: (tx: UnifiedTransaction) => void;
@@ -21,52 +23,53 @@ interface TransactionRowProps {
     onClearStale?: (matchId: string) => void;
 }
 
+function getRowClass(tx: UnifiedTransaction) {
+    const matches = getMatches(tx);
+    const matched = matches.length > 0;
+    const isStale = matched && matches[0].stale === true;
+    let cls = `matching-row matching-row--${matched ? 'matched' : 'unmatched'}`;
+    if (isStale) cls += ' matching-row--stale';
+    cls += ' matching-row--clickable';
+    return cls;
+}
+
 const TransactionRow: React.FC<TransactionRowProps> = ({
     tx, onOpenDetail, onLink, onUnlink, onClearStale,
 }) => {
     const { t } = useLang();
-    const matches = getMatches(tx);
-    const matched = matches.length > 0;
+    const { fmtDate } = useDateFormat();
     const isCredit = tx.type === 'credit';
     const currency = tx.currency || 'TRY';
-
-    // Use first match for score / status display
+    const matches = getMatches(tx);
+    const matched = matches.length > 0;
     const primaryMatch: ReconciliationMatch | undefined = matches[0];
     const score = primaryMatch ? getMatchScore(primaryMatch) : 0;
     const level = matched ? getConfidenceLevel(score) : undefined;
-    const isStale = primaryMatch && (primaryMatch as any).stale === true;
-    const staleReason = isStale ? (primaryMatch as any).stale_reason : undefined;
-
-    const renderConfidenceBadge = (s: number) => {
-        const l = getConfidenceLevel(s);
-        return (
-            <span className={`matching-confidence matching-confidence--${l}`}>
-                {Math.round(s * 100)}%
-            </span>
-        );
-    };
+    const isStale = matched && primaryMatch?.stale === true;
+    const staleReason = primaryMatch?.stale_reason;
 
     return (
         <tr
-            className={`matching-row matching-row--${matched ? 'matched' : 'unmatched'}${isStale ? ' matching-row--stale' : ''} matching-row--clickable`}
+            className={getRowClass(tx)}
             onClick={() => onOpenDetail(tx)}
-            style={{ cursor: 'pointer' }}
         >
-            <td className="matching-col--date">{tx.date || '-'}</td>
-            <td className="matching-col--desc" title={tx.description}>
+            {/* === LEFT HALF: Bank Transaction === */}
+            <td className="matching-col--date mcell mcell--left-first">{fmtDate(tx.date)}</td>
+            <td className="matching-col--desc mcell" title={tx.description}>
                 {tx.description || '-'}
             </td>
-            <td className="matching-col--type">
-                <span className={`matching-type-badge matching-type-badge--${isCredit ? 'credit' : 'debit'}`}>
-                    {isCredit ? t('credit') : t('debit')}
-                </span>
+            <td className={`matching-col--amount matching-col--amount-${isCredit ? 'credit' : 'debit'} mcell mcell--left-last`}>
+                {isCredit ? '+' : '-'}{fmtCurrency(Math.abs(tx.amount), currency)}
             </td>
-            <td className="matching-col--amount matching-col--divider">
-                {fmtCurrency(Math.abs(tx.amount), currency)}
-            </td>
-            <td className="matching-col--doc">
+
+            {/* === SPACER === */}
+            <td className="mcell--spacer" />
+
+            {/* === RIGHT HALF: Match Details === */}
+            {/* Doc filename */}
+            <td className="matching-col--doc mcell mcell--right-first">
                 {matched ? (
-                    <>
+                    <div className="matching-doc-match-wrap">
                         <span className="matching-doc-match">
                             {primaryMatch!.status !== 'manual' && (
                                 <span className={`matching-confidence-dot matching-confidence-dot--${level}`} />
@@ -78,43 +81,75 @@ const TransactionRow: React.FC<TransactionRowProps> = ({
                                 <span className="matching-doc-count">+{matches.length - 1}</span>
                             )}
                         </span>
-                        {isStale && staleReason && (
-                            <div className="matching-stale-warning" title={staleReason}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                                    <line x1="12" y1="9" x2="12" y2="13" />
-                                    <line x1="12" y1="17" x2="12.01" y2="17" />
-                                </svg>
-                                <span className="matching-stale-warning__text">{staleReason}</span>
+                        {isStale && (
+                            <span className="matching-stale-warning" onClick={e => e.stopPropagation()}>
+                                <span className="matching-stale-warning__text" title={staleReason || ''}>
+                                    {t('staleWarning')}
+                                    {staleReason && (
+                                        <span className="matching-stale-warning__reason">
+                                            {' '}({staleReason})
+                                        </span>
+                                    )}
+                                </span>
                                 {onClearStale && (
                                     <button
                                         className="matching-stale-warning__dismiss"
-                                        onClick={e => {
-                                            e.stopPropagation();
-                                            onClearStale(primaryMatch!._id);
-                                        }}
-                                        title={t('dismissStale') || 'Dismiss'}
+                                        onClick={() => onClearStale(primaryMatch!._id)}
+                                        title={t('staleDismiss')}
                                     >
-                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                                            <polyline points="20 6 9 17 4 12" />
-                                        </svg>
+                                        ✓
                                     </button>
                                 )}
-                            </div>
+                            </span>
                         )}
-                    </>
+                    </div>
                 ) : (
                     <span className="matching-no-match">{t('noMatch')}</span>
                 )}
             </td>
-            <td className="matching-col--status">
-                {matched ? (
-                    renderConfidenceBadge(score)
+
+            {/* Vendor */}
+            <td className="matching-col--vendor mcell">
+                {matched && primaryMatch!.document_ref.vendor_name ? (
+                    <span title={primaryMatch!.document_ref.vendor_name} className="matching-col--vendor-text">
+                        {primaryMatch!.document_ref.vendor_name}
+                    </span>
                 ) : (
                     <span className="matching-no-match">-</span>
                 )}
             </td>
-            <td className="matching-col--actions" onClick={e => e.stopPropagation()}>
+
+            {/* Doc Amount */}
+            <td className="matching-col--doc-amount mcell">
+                {matched && primaryMatch!.document_ref.amount != null ? (
+                    fmtCurrency(primaryMatch!.document_ref.amount, currency)
+                ) : (
+                    <span className="matching-no-match">-</span>
+                )}
+            </td>
+
+            {/* Doc Date */}
+            <td className="matching-col--doc-date mcell">
+                {matched && primaryMatch!.document_ref.date ? (
+                    fmtDate(primaryMatch!.document_ref.date)
+                ) : (
+                    <span className="matching-no-match">-</span>
+                )}
+            </td>
+
+            {/* Confidence */}
+            <td className="matching-col--status mcell">
+                {matched ? (
+                    <span className={`matching-confidence matching-confidence--${getConfidenceLevel(score)}`}>
+                        {Math.round(score * 100)}%
+                    </span>
+                ) : (
+                    <span className="matching-no-match">-</span>
+                )}
+            </td>
+
+            {/* Actions */}
+            <td className="matching-col--actions mcell mcell--right-last" onClick={e => e.stopPropagation()}>
                 {matched ? (
                     <div className="matching-row__actions">
                         <button

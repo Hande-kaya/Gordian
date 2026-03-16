@@ -106,6 +106,10 @@ export const settingsTranslations: Translations = {
         languageEnglish: 'English',
         languageGerman: 'Deutsch',
 
+        // Date format section
+        dateFormatSection: 'Tarih Formatı',
+        dateFormatDescription: 'Tarihlerin nasıl görüntüleneceğini seçin.',
+
         // Subscription section
         subscriptionSection: 'Abonelik ve Krediler',
         subscriptionDesc: 'Mevcut planınız ve kredi satın alma seçenekleri.',
@@ -154,17 +158,23 @@ export const settingsTranslations: Translations = {
         loading: 'Yükleniyor...',
         quotaExceeded: 'Kotanız doldu. Devam etmek için kredi satın alın.',
 
-        // Account info
-        deleteAccountBtn: 'Hesabı Sil',
-        deleteAccountTitle: 'Hesabı Sil',
-        deleteAccountMessage: 'Bu işlem henüz aktif değil. Hesabınızı silmek için lütfen destek ekibiyle iletişime geçin: support@gordiananalytics.com',
-        deleteAccountConfirm: 'Anladım',
-        deleteAccountCancel: 'Vazgeç',
+        // Account section
         accountSection: 'Hesap Bilgileri',
         accountType: 'Hesap Tipi',
         accountTypeB2C: 'Bireysel',
         memberId: 'Üye No',
         memberSince: 'Kayıt Tarihi',
+        deleteAccountBtn: 'Hesabı Sil',
+        deleteAccountTitle: 'Hesabı Sil',
+        deleteAccountWarning: 'Bu işlem kalıcıdır ve geri alınamaz. Verileriniz korunacak ancak hesabınız devre dışı bırakılacaktır.',
+        deleteAccountTypeHint: 'Onaylamak için "delete" yazın',
+        deleteAccountTypePlaceholder: 'delete',
+        deleteAccountDeleting: 'Siliniyor...',
+        deleteAccountConfirm: 'Hesabımı Sil',
+        deleteAccountCancel: 'Vazgeç',
+        deleteAccountError: 'Bir şeyler ters gitti. Lütfen tekrar deneyin.',
+        deleteAccountFinalMessage: 'Kesinlikle emin misiniz? Bu işlem geri alınamaz.',
+        deleteAccountFinalConfirm: 'Evet, Hesabımı Sil',
     },
     en: {
         navSettings: 'Settings',
@@ -267,6 +277,10 @@ export const settingsTranslations: Translations = {
         languageEnglish: 'English',
         languageGerman: 'Deutsch',
 
+        // Date format section
+        dateFormatSection: 'Date Format',
+        dateFormatDescription: 'Choose how dates are displayed.',
+
         // Subscription section
         subscriptionSection: 'Subscription & Credits',
         subscriptionDesc: 'Your current plan and credit purchase options.',
@@ -315,17 +329,23 @@ export const settingsTranslations: Translations = {
         loading: 'Loading...',
         quotaExceeded: 'Quota exceeded. Purchase credits to continue.',
 
-        // Account info
-        deleteAccountBtn: 'Delete Account',
-        deleteAccountTitle: 'Delete Account',
-        deleteAccountMessage: 'This feature is not yet available. To delete your account, please contact our support team at: support@gordiananalytics.com',
-        deleteAccountConfirm: 'Got it',
-        deleteAccountCancel: 'Cancel',
+        // Account section
         accountSection: 'Account Information',
         accountType: 'Account Type',
         accountTypeB2C: 'Individual',
         memberId: 'Member ID',
         memberSince: 'Member Since',
+        deleteAccountBtn: 'Delete Account',
+        deleteAccountTitle: 'Delete Account',
+        deleteAccountWarning: 'This action is permanent and cannot be undone. Your data will be retained but your account will be deactivated.',
+        deleteAccountTypeHint: 'Type "delete" to confirm',
+        deleteAccountTypePlaceholder: 'delete',
+        deleteAccountDeleting: 'Deleting...',
+        deleteAccountConfirm: 'Delete My Account',
+        deleteAccountCancel: 'Cancel',
+        deleteAccountError: 'Something went wrong. Please try again.',
+        deleteAccountFinalMessage: 'Are you absolutely sure? This cannot be undone.',
+        deleteAccountFinalConfirm: 'Yes, Delete My Account',
     },
     de: {
         navSettings: 'Einstellungen',
@@ -428,6 +448,10 @@ export const settingsTranslations: Translations = {
         languageEnglish: 'English',
         languageGerman: 'Deutsch',
 
+        // Date format section
+        dateFormatSection: 'Datumsformat',
+        dateFormatDescription: 'Wählen Sie, wie Daten angezeigt werden.',
+
         // Subscription section
         subscriptionSection: 'Abonnement & Credits',
         subscriptionDesc: 'Ihr aktueller Plan und Kaufoptionen.',
@@ -476,7 +500,7 @@ export const settingsTranslations: Translations = {
         loading: 'Wird geladen...',
         quotaExceeded: 'Kontingent überschritten. Kaufen Sie Credits, um fortzufahren.',
 
-        // Account info
+        // Account section
         accountSection: 'Kontoinformationen',
         accountType: 'Kontotyp',
         accountTypeB2C: 'Privat',
@@ -484,8 +508,14 @@ export const settingsTranslations: Translations = {
         memberSince: 'Mitglied seit',
         deleteAccountBtn: 'Konto löschen',
         deleteAccountTitle: 'Konto löschen',
-        deleteAccountMessage: 'Diese Funktion ist noch nicht verfügbar. Um Ihr Konto zu löschen, wenden Sie sich bitte an unser Support-Team: support@gordiananalytics.com',
-        deleteAccountConfirm: 'Verstanden',
+        deleteAccountWarning: 'Diese Aktion ist dauerhaft und kann nicht rückgängig gemacht werden. Ihre Daten bleiben erhalten, aber Ihr Konto wird deaktiviert.',
+        deleteAccountTypeHint: 'Geben Sie "delete" ein, um zu bestätigen',
+        deleteAccountTypePlaceholder: 'delete',
+        deleteAccountDeleting: 'Wird gelöscht...',
+        deleteAccountConfirm: 'Mein Konto löschen',
         deleteAccountCancel: 'Abbrechen',
+        deleteAccountError: 'Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.',
+        deleteAccountFinalMessage: 'Sind Sie absolut sicher? Dies kann nicht rückgängig gemacht werden.',
+        deleteAccountFinalConfirm: 'Ja, mein Konto löschen',
     },
 };

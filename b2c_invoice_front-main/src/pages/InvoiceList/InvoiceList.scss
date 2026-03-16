@@ -22,6 +22,46 @@
     &.status-rejected { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
 }
 
+// Upload row: dropzone + manual entry button
+.upload-row {
+    display: flex;
+    align-items: stretch;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-base;
+
+    .upload-dropzone {
+        flex: 1;
+        margin-bottom: 0;
+    }
+}
+
+// Manual entry button
+.manual-entry-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 18px;
+    border: 2px dashed var(--border-color);
+    border-radius: $radius-lg;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+
+    &:hover {
+        border-color: var(--primary-color, #3b82f6);
+        color: var(--primary-color, #3b82f6);
+        background: rgba(59, 130, 246, 0.04);
+    }
+
+    svg {
+        flex-shrink: 0;
+    }
+}
+
 // Inline Upload Dropzone (above table, below search)
 .upload-dropzone {
     display: flex; align-items: center; justify-content: center; gap: $spacing-sm;
@@ -303,6 +343,7 @@
         input[type="number"] {
             width: 70px; padding: $spacing-sm $spacing-md; border: 1px solid var(--border-color); border-radius: $radius-md;
             font-size: $font-size-base; color: var(--text-primary); text-align: center;
+            background: var(--bg-input, var(--bg-white)); color-scheme: light dark;
             &:focus { outline: none; border-color: $color-success; box-shadow: 0 0 0 2px rgba($color-success, 0.1); }
         }
         .custom-months-hint { font-size: $font-size-sm; color: var(--text-muted); }
@@ -317,6 +358,7 @@
             input[type="date"] {
                 width: 100%; padding: $spacing-sm $spacing-md; border: 1px solid var(--border-color); border-radius: $radius-md;
                 font-size: $font-size-base; color: var(--text-primary);
+                background: var(--bg-input, var(--bg-white)); color-scheme: light dark;
                 &:focus { outline: none; border-color: $color-success; box-shadow: 0 0 0 2px rgba($color-success, 0.1); }
                 &:disabled { background: var(--border-color); cursor: not-allowed; }
             }

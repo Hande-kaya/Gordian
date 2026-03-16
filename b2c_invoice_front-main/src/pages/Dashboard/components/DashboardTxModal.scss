@@ -1,0 +1,349 @@
+/**
+ * DashboardTxModal — Read-only transaction detail modal styles.
+ */
+
+.dash-tx-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: dashTxFadeIn 0.2s ease;
+}
+
+@keyframes dashTxFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes dashTxSlideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.dash-tx-modal {
+    width: min(1100px, 95vw);
+    height: 85vh;
+    background: var(--bg-white, #fff);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    animation: dashTxSlideUp 0.25s ease;
+
+    /* Header */
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border-color, #e2e8f0);
+        flex-shrink: 0;
+    }
+
+    &__title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary, #1e293b);
+        margin: 0;
+    }
+
+    &__close {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        font-size: 22px;
+        color: var(--text-muted, #94a3b8);
+        cursor: pointer;
+        transition: all 0.15s;
+
+        &:hover {
+            background: var(--bg-hover, #f1f5f9);
+            color: var(--text-primary, #1e293b);
+        }
+    }
+
+    /* PDF Grid — takes all remaining space */
+    &__pdfs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        border-bottom: 1px solid var(--border-color, #e2e8f0);
+
+        &--single {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    &__pdf-cell {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+
+        /* Divider between two PDF cells */
+        & + & {
+            border-left: 1px solid var(--border-color, #e2e8f0);
+        }
+    }
+
+    &__pdf-label {
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-secondary, #64748b);
+        background: var(--bg-hover, #f8fafc);
+        border-bottom: 1px solid var(--border-light, #f1f5f9);
+        flex-shrink: 0;
+    }
+
+    &__pdf-content {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        position: relative;
+
+        /* DocPreview fills this container */
+        .doc-preview {
+            height: 100%;
+        }
+
+        .doc-preview__content {
+            overflow: auto;
+        }
+    }
+
+    /* Info Section — fixed at bottom, never grows */
+    &__info {
+        display: flex;
+        gap: 24px;
+        padding: 16px 20px;
+        flex-shrink: 0;
+        overflow-y: auto;
+        max-height: 200px;
+    }
+
+    &__tx-details {
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__field {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+
+    &__label {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-muted, #94a3b8);
+        min-width: 65px;
+        flex-shrink: 0;
+    }
+
+    &__value {
+        font-size: 13px;
+        color: var(--text-primary, #1e293b);
+        word-break: break-word;
+
+        &--desc {
+            max-height: 48px;
+            overflow-y: auto;
+        }
+    }
+
+    &__amount {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text-primary, #1e293b);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* Match info (right side of info section) */
+    &__match-info {
+        flex: 1;
+        min-width: 0;
+        padding-left: 24px;
+        border-left: 1px solid var(--border-light, #f1f5f9);
+    }
+
+    &__match-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    &__match-meta {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    &__match-source {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--primary-color, #3b82f6);
+        letter-spacing: 0.5px;
+    }
+
+    &__match-filename {
+        font-size: 12px;
+        color: var(--text-secondary, #64748b);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__match-vendor {
+        font-size: 12px;
+        color: var(--text-primary, #1e293b);
+        font-weight: 500;
+    }
+
+    &__match-amount {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary, #1e293b);
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__ai-reason {
+        margin: 8px 0 0;
+        font-size: 12px;
+        font-style: italic;
+        line-height: 1.5;
+        color: var(--text-secondary, #64748b);
+    }
+
+    /* Match tabs (multiple matches) */
+    &__match-tabs {
+        display: flex;
+        gap: 6px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+
+    &__match-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 6px;
+        background: transparent;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-secondary, #64748b);
+        cursor: pointer;
+        transition: all 0.15s;
+
+        &:hover {
+            border-color: var(--primary-color, #3b82f6);
+            color: var(--primary-color, #3b82f6);
+        }
+
+        &--active {
+            background: rgba(59, 130, 246, 0.08);
+            border-color: var(--primary-color, #3b82f6);
+            color: var(--primary-color, #3b82f6);
+            font-weight: 600;
+        }
+    }
+
+    &__match-tab-score {
+        font-weight: 600;
+        font-size: 10px;
+    }
+
+    /* No match message */
+    &__no-match {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-muted, #94a3b8);
+        font-size: 13px;
+        font-style: italic;
+        padding-left: 24px;
+        border-left: 1px solid var(--border-light, #f1f5f9);
+    }
+
+    /* Score circle */
+    &__score-circle {
+        position: relative;
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+
+        svg { display: block; }
+
+        &--high .dash-tx-modal__score-fg { stroke: #16a34a; }
+        &--high .dash-tx-modal__score-val { color: #16a34a; }
+        &--medium .dash-tx-modal__score-fg { stroke: #d97706; }
+        &--medium .dash-tx-modal__score-val { color: #d97706; }
+        &--low .dash-tx-modal__score-fg { stroke: #dc2626; }
+        &--low .dash-tx-modal__score-val { color: #dc2626; }
+    }
+
+    &__score-bg {
+        fill: none;
+        stroke: var(--border-color, #e2e8f0);
+        stroke-width: 3;
+    }
+
+    &__score-fg {
+        fill: none;
+        stroke-width: 3;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 0.4s ease;
+    }
+
+    &__score-val {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 700;
+    }
+}
+
+/* Responsive — stack PDFs vertically on small screens */
+@media (max-width: 768px) {
+    .dash-tx-modal {
+        width: 98vw;
+        height: 95vh;
+
+        &__pdfs {
+            grid-template-columns: 1fr;
+        }
+
+        &__info {
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        &__match-info,
+        &__no-match {
+            padding-left: 0;
+            border-left: none;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-light, #f1f5f9);
+        }
+    }
+}

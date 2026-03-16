@@ -1,0 +1,206 @@
+/* ManualEntryModal — manual document creation form */
+
+.manual-entry-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(3px);
+}
+
+.manual-entry-modal {
+    width: 480px;
+    max-width: 95vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card, #fff);
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border-color, #e2e8f0);
+
+        h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary, #1e293b);
+        }
+    }
+
+    &__close {
+        width: 28px;
+        height: 28px;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--text-muted, #94a3b8);
+        font-size: 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &:hover {
+            background: var(--bg-hover, #f1f5f9);
+            color: var(--text-primary, #1e293b);
+        }
+    }
+
+    &__body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    &__footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 14px 20px;
+        border-top: 1px solid var(--border-color, #e2e8f0);
+    }
+
+    &__cancel {
+        padding: 8px 18px;
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 6px;
+        background: transparent;
+        color: var(--text-secondary, #64748b);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--bg-hover, #f1f5f9);
+        }
+    }
+
+    &__submit {
+        padding: 8px 24px;
+        border: none;
+        border-radius: 6px;
+        background: var(--primary-color, #3b82f6);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+
+        &:hover:not(:disabled) {
+            filter: brightness(1.1);
+        }
+
+        &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    }
+}
+
+/* Form fields */
+.manual-entry-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    label {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-secondary, #64748b);
+    }
+
+    input, select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 6px;
+        font-size: 13px;
+        color: var(--text-primary, #1e293b);
+        background: var(--bg-input, #faf9f7);
+        box-sizing: border-box;
+        transition: border-color 0.15s;
+
+        &:focus {
+            outline: none;
+            border-color: var(--primary-color, #3b82f6);
+            background: var(--bg-input-focus, #fff);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+
+        &::placeholder {
+            color: var(--text-muted, #94a3b8);
+        }
+    }
+
+    select {
+        cursor: pointer;
+    }
+
+    &--error {
+        input, select {
+            border-color: #dc2626;
+
+            &:focus {
+                box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.1);
+            }
+        }
+    }
+
+    &__error {
+        font-size: 11px;
+        color: #dc2626;
+        margin-top: 1px;
+    }
+}
+
+/* Amount + Currency row */
+.manual-entry-row {
+    display: flex;
+    gap: 12px;
+
+    .manual-entry-field--amount {
+        flex: 2;
+    }
+
+    .manual-entry-field--currency {
+        flex: 1;
+        min-width: 100px;
+    }
+}
+
+/* Dark mode */
+[data-theme="dark"] {
+    .manual-entry-modal {
+        input, select {
+            color-scheme: dark;
+        }
+    }
+}
+
+/* Mobile */
+@media (max-width: 520px) {
+    .manual-entry-modal {
+        width: 100%;
+        max-width: 100vw;
+        border-radius: 12px 12px 0 0;
+        max-height: 95vh;
+    }
+
+    .manual-entry-row {
+        flex-direction: column;
+        gap: 14px;
+    }
+}

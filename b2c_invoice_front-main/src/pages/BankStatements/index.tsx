@@ -10,12 +10,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { DataDashboard } from '../../shared/components';
 import { useLang } from '../../shared/i18n';
 import { useAuth } from '../../context/AuthContext';
+import { useDateFormat } from '../../context/DateFormatContext';
 import documentApi, { DocumentItem } from '../../services/documentApi';
 import BulkUploadModal from '../InvoiceList/BulkUploadModal';
 import { getBankStatementColumns } from './columns';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import DragDropOverlay from '../../components/common/DragDropOverlay';
-import { DashboardIcon, ExpenseIcon, IncomeIcon, BankIcon, ReconciliationIcon, TrashIcon, FilesIcon, SettingsIcon } from '../../shared/icons/NavIcons';
+import { DashboardIcon, ExpenseIcon, RevenueIcon, BankIcon, ReconciliationIcon, TrashIcon, FilesIcon, SettingsIcon } from '../../shared/icons/NavIcons';
 import './BankStatements.scss';
 
 const BankStatements: React.FC = () => {
@@ -23,6 +24,7 @@ const BankStatements: React.FC = () => {
     const location = useLocation();
     const { user, logout } = useAuth();
     const { t } = useLang();
+    const { fmtDate } = useDateFormat();
 
     const [data, setData] = useState<DocumentItem[]>([]);
     const [loading, setLoading] = useState(false);
@@ -42,11 +44,11 @@ const BankStatements: React.FC = () => {
 
     const navItems = useMemo(() => [
         { id: 'dashboard', label: t('navDashboard'), icon: <DashboardIcon />, route: '/dashboard' },
-        { id: 'expenses', label: t('navExpenses'), icon: <ExpenseIcon />, route: '/invoices' },
-        { id: 'income', label: t('navIncome'), icon: <IncomeIcon />, route: '/income' },
-        { id: 'files', label: t('navFiles'), icon: <FilesIcon />, route: '/files' },
-        { id: 'bank-statements', label: t('navBankStatements'), icon: <BankIcon />, route: '/bank-statements' },
         { id: 'reconciliation', label: t('navReconciliation'), icon: <ReconciliationIcon />, route: '/reconciliation' },
+        { id: 'bank-statements', label: t('navBankStatements'), icon: <BankIcon />, route: '/bank-statements' },
+        { id: 'expenses', label: t('navExpenses'), icon: <ExpenseIcon />, route: '/invoices' },
+        { id: 'revenue', label: t('navRevenue'), icon: <RevenueIcon />, route: '/revenue' },
+        { id: 'files', label: t('navFiles'), icon: <FilesIcon />, route: '/files' },
         { id: 'trash', label: t('navTrash'), icon: <TrashIcon />, route: '/trash' },
         { id: 'sep', label: '', icon: null, isSeparator: true },
         { id: 'settings', label: t('navSettings'), icon: <SettingsIcon />, route: '/settings' },
@@ -153,8 +155,8 @@ const BankStatements: React.FC = () => {
     };
 
     const columns = useMemo(
-        () => getBankStatementColumns(formatCurrency, t),
-        [t]
+        () => getBankStatementColumns(formatCurrency, t, fmtDate),
+        [t, fmtDate]
     );
 
     const handleSaveChanges = useCallback(async (changes: Record<string, Record<string, any>>) => {

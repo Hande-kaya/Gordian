@@ -1,12 +1,11 @@
 /** TransactionModal — Unified 2×2 grid: PDFs (top), info + picker (bottom). */
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLang } from '../../shared/i18n';
-import { DocumentItem } from '../../services/documentApi';
+import { DocumentItem, DocumentFilters, getDocuments } from '../../services/documentApi';
 import { UnifiedTransaction } from '../../services/reconciliationApi';
 import {
     fmtCurrency, getMatches, getMatchScore, getConfidenceLevel,
-    getDocAmount, getDocCurrency, getDocVendor, parseDocDate, daysBetween,
-    calcProximityScore, getScoreLevel, MAX_DATE_DIFF_DAYS,
+    getDocAmount, getDocCurrency,
 } from './matchingPanelUtils';
 import DocPreview, { HighlightBox } from './DocPreview';
 import './TransactionModal.scss';
@@ -47,7 +46,7 @@ const ScoreCircle: React.FC<{ score: number; level: string }> = ({ score, level 
 interface TransactionModalProps {
     transaction: UnifiedTransaction;
     expenses: DocumentItem[];
-    incomes: DocumentItem[];
+    revenues: DocumentItem[];
     linkedDocIds: Set<string>;
     onLink: (documentId: string) => Promise<boolean>;
     onUnlink: (matchId: string) => void;
@@ -55,14 +54,13 @@ interface TransactionModalProps {
 }
 
 const TransactionModal: React.FC<TransactionModalProps> = ({
-    transaction, expenses, incomes, linkedDocIds, onLink, onUnlink, onClose,
+    transaction, expenses, revenues, linkedDocIds, onLink, onUnlink, onClose,
 }) => {
     const { t } = useLang();
     const matches = getMatches(transaction);
     const isCredit = transaction.type === 'credit';
     const currency = transaction.currency || 'TRY';
     const txAmount = Math.abs(transaction.amount);
-    const txDate = parseDocDate(transaction.date);
 
     const [previewDocId, setPreviewDocId] = useState<string | null>(matches[0]?.document_ref.document_id || null);
     const [previewFilename, setPreviewFilename] = useState(matches[0]?.document_ref.filename || '');
@@ -72,10 +70,29 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
     const stmtHighlightY = (highlightStmt && transaction.y_min != null && transaction.y_max != null)
         ? [transaction.y_min, transaction.y_max] as [number, number] : undefined;
 
+    const [fullscreen, setFullscreen] = useState<'statement' | 'document' | null>(null);
+    const [pickerTab, setPickerTab] = useState<'expense' | 'revenue'>(isCredit ? 'revenue' : 'expense');
+    const [search, setSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [colFilters, setColFilters] = useState<Record<string, string>>({});
+    const [debouncedColFilters, setDebouncedColFilters] = useState<Record<string, string>>({});
+    const [linking, setLinking] = useState(false);
+    const [pickerDocsState, setPickerDocsState] = useState<DocumentItem[]>([]);
+    const [pickerPage, setPickerPage] = useState(1);
+    const [pickerHasMore, setPickerHasMore] = useState(false);
+    const [pickerLoading, setPickerLoading] = useState(false);
+    const [pickerTotal, setPickerTotal] = useState(0);
+    const [addedIds, setAddedIds] = useState<Set<string>>(() => {
+        const ids = new Set<string>();
+        matches.forEach(m => { if (m.document_ref?.document_id) ids.add(m.document_ref.document_id); });
+        return ids;
+    });
+    const searchRef = useRef<HTMLInputElement>(null);
+
     const previewDoc = useMemo(() => {
         if (!previewDocId) return null;
-        return [...expenses, ...incomes].find(d => d.id === previewDocId) || null;
-    }, [previewDocId, expenses, incomes]);
+        return [...expenses, ...revenues, ...pickerDocsState].find(d => d.id === previewDocId) || null;
+    }, [previewDocId, expenses, revenues, pickerDocsState]);
 
     const docHighlight = useMemo<{ page: number; box: HighlightBox } | null>(() => {
         if (!highlightDoc || !previewDoc) return null;
@@ -97,24 +114,18 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
     const matchPct = activeMatch ? Math.round(getMatchScore(activeMatch) * 100) : 0;
     const matchLevel = activeMatch ? getConfidenceLevel(getMatchScore(activeMatch)) : 'low';
 
-    const [fullscreen, setFullscreen] = useState<'statement' | 'document' | null>(null);
-    const [pickerTab, setPickerTab] = useState<'expense' | 'income'>(isCredit ? 'income' : 'expense');
-    const [search, setSearch] = useState('');
-    const [linking, setLinking] = useState(false);
-    const [showAll, setShowAll] = useState(false);
-    const [maxDays, setMaxDays] = useState(365);
-    const [addedIds, setAddedIds] = useState<Set<string>>(() => {
-        const ids = new Set<string>();
-        matches.forEach(m => { if (m.document_ref?.document_id) ids.add(m.document_ref.document_id); });
-        return ids;
-    });
-    const searchRef = useRef<HTMLInputElement>(null);
-
     useEffect(() => {
         const ids = new Set<string>();
         matches.forEach(m => { if (m.document_ref?.document_id) ids.add(m.document_ref.document_id); });
         setAddedIds(ids);
     }, [matches]);
+
+    // Lock background scroll while modal is open
+    useEffect(() => {
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = prev; };
+    }, []);
 
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
@@ -139,41 +150,58 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
         setLinking(false);
     }, [onLink]);
 
-    const pickerDocs = useMemo(() => {
-        const docs = pickerTab === 'income' ? incomes : expenses;
-        const ownLinkedIds = new Set(
-            matches.map(m => m.document_ref?.document_id).filter(Boolean),
-        );
-        let items = docs.filter(d => {
-            if (d.ocr_status !== 'completed') return false;
-            if (linkedDocIds?.has(d.id) && !ownLinkedIds.has(d.id)) return false;
-            return true;
-        });
-        const dateLimitDays = showAll ? maxDays : MAX_DATE_DIFF_DAYS;
-        if (txDate) {
-            items = items.filter(d => {
-                const dd = parseDocDate(d.extracted_data?.invoice_date);
-                if (!dd) return true;
-                return daysBetween(txDate, dd) <= dateLimitDays;
-            });
-        }
-        const term = search.toLowerCase().trim();
-        if (term) {
-            items = items.filter(d => {
-                const name = (d.filename || '').toLowerCase();
-                const vendor = getDocVendor(d).toLowerCase();
-                return name.includes(term) || vendor.includes(term);
-            });
-        }
-        return [...items].sort((a, b) => {
-            const sa = calcProximityScore(txAmount, txDate, getDocAmount(a), a.extracted_data?.invoice_date);
-            const sb = calcProximityScore(txAmount, txDate, getDocAmount(b), b.extracted_data?.invoice_date);
-            return sb - sa;
-        });
-    }, [pickerTab, expenses, incomes, matches, linkedDocIds, txDate, search, txAmount, showAll, maxDays]);
+    const PICKER_PAGE_SIZE = 5;
 
-    const expenseCount = expenses.filter(d => d.ocr_status === 'completed').length;
-    const incomeCount = incomes.filter(d => d.ocr_status === 'completed').length;
+    const fetchPickerDocs = useCallback(async (
+        page: number, searchVal: string, filters: Record<string, string>, append: boolean,
+    ) => {
+        setPickerLoading(true);
+        const docType = pickerTab === 'revenue' ? 'income' : 'invoice';
+        const apiFilters: DocumentFilters = {};
+        if (searchVal) apiFilters.search = searchVal;
+        if (filters.date) apiFilters.filter_date = filters.date;
+        if (filters.amount) apiFilters.filter_amount = filters.amount;
+        if (filters.currency) apiFilters.filter_currency = filters.currency;
+        if (filters.supplier) apiFilters.filter_supplier = filters.supplier;
+
+        try {
+            const res = await getDocuments(
+                page, PICKER_PAGE_SIZE, docType, undefined,
+                Object.keys(apiFilters).length > 0 ? apiFilters : undefined,
+            );
+            if (res.success && res.data) {
+                const newDocs = res.data.documents.filter(d => d.ocr_status === 'completed');
+                setPickerDocsState(prev => append ? [...prev, ...newDocs] : newDocs);
+                setPickerHasMore(res.data.has_next);
+                setPickerPage(page);
+                setPickerTotal(res.data.total);
+            }
+        } catch {
+            // silently fail
+        }
+        setPickerLoading(false);
+    }, [pickerTab]);
+
+    // Debounce top search
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedSearch(search), 300);
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    // Debounce column filters
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedColFilters({ ...colFilters }), 300);
+        return () => clearTimeout(timer);
+    }, [colFilters]);
+
+    // Fetch when filters/tab change
+    useEffect(() => {
+        fetchPickerDocs(1, debouncedSearch, debouncedColFilters, false);
+    }, [debouncedSearch, debouncedColFilters, pickerTab, fetchPickerDocs]);
+
+    const handleColFilter = useCallback((col: string, val: string) => {
+        setColFilters(prev => ({ ...prev, [col]: val }));
+    }, []);
 
     const fsDocId = fullscreen === 'statement' ? transaction.statement_id : fullscreen === 'document' ? previewDocId : null;
     const fsFilename = fullscreen === 'statement' ? t('bankStatementPreview') : fullscreen === 'document' ? previewFilename : '';
@@ -214,9 +242,29 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                     </div>
 
                     <div className="tx-modal__cell tx-modal__cell--doc">
-                        {previewDocId ? (
-                            <>
-                                <div className="tx-modal__preview-bar">
+                        <div className="tx-modal__preview-bar">
+                            <button
+                                className={`tx-modal__picker-tab tx-modal__picker-tab--expense${pickerTab === 'expense' ? ' tx-modal__picker-tab--active' : ''}`}
+                                onClick={() => setPickerTab('expense')}
+                            >
+                                {t('pickerExpenses')} ({pickerTab === 'expense' ? pickerTotal : '-'})
+                            </button>
+                            <button
+                                className={`tx-modal__picker-tab tx-modal__picker-tab--revenue${pickerTab === 'revenue' ? ' tx-modal__picker-tab--active' : ''}`}
+                                onClick={() => setPickerTab('revenue')}
+                            >
+                                {t('pickerRevenue')} ({pickerTab === 'revenue' ? pickerTotal : '-'})
+                            </button>
+                            <input
+                                ref={searchRef}
+                                className="tx-modal__picker-search"
+                                type="text"
+                                placeholder={t('searchDocuments')}
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                            />
+                            {previewDocId && (
+                                <>
                                     <span className="tx-modal__preview-name" title={previewFilename}>
                                         {previewFilename}
                                     </span>
@@ -229,22 +277,24 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                                         onClick={() => setFullscreen('document')}>
                                         <ZoomIcon />
                                     </button>
+                                </>
+                            )}
+                        </div>
+                        <div className="tx-modal__preview-content">
+                            {previewDocId ? (
+                                <DocPreview
+                                    key={previewDocId}
+                                    documentId={previewDocId}
+                                    filename={previewFilename}
+                                    initialPage={docHighlight?.page}
+                                    highlightBox={docHighlight?.box}
+                                />
+                            ) : (
+                                <div className="tx-modal__preview-empty">
+                                    <p>{t('previewDocument')}</p>
                                 </div>
-                                <div className="tx-modal__preview-content">
-                                    <DocPreview
-                                        key={previewDocId}
-                                        documentId={previewDocId}
-                                        filename={previewFilename}
-                                        initialPage={docHighlight?.page}
-                                        highlightBox={docHighlight?.box}
-                                    />
-                                </div>
-                            </>
-                        ) : (
-                            <div className="tx-modal__preview-empty">
-                                <p>{t('previewDocument')}</p>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
 
                     <div className="tx-modal__cell tx-modal__cell--info">
@@ -290,84 +340,73 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                     </div>
 
                     <div className="tx-modal__cell tx-modal__cell--picker">
-                        <div className="tx-modal__picker-header">
-                            <button
-                                className={`tx-modal__picker-tab tx-modal__picker-tab--expense${pickerTab === 'expense' ? ' tx-modal__picker-tab--active' : ''}`}
-                                onClick={() => setPickerTab('expense')}
-                            >
-                                {t('uploadExpenses')} ({expenseCount})
-                            </button>
-                            <button
-                                className={`tx-modal__picker-tab tx-modal__picker-tab--income${pickerTab === 'income' ? ' tx-modal__picker-tab--active' : ''}`}
-                                onClick={() => setPickerTab('income')}
-                            >
-                                {t('uploadIncome')} ({incomeCount})
-                            </button>
-                            <input
-                                ref={searchRef}
-                                className="tx-modal__picker-search"
-                                type="text"
-                                placeholder={t('searchDocuments')}
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                            />
-                        </div>
-                        <div className="tx-modal__picker-list">
-                            {pickerDocs.length === 0 ? (
-                                <div className="tx-modal__picker-empty">{t('noDocumentsAvailable')}</div>
-                            ) : pickerDocs.map(doc => {
-                                const isAdded = addedIds.has(doc.id);
-                                const score = calcProximityScore(
-                                    txAmount, txDate, getDocAmount(doc), doc.extracted_data?.invoice_date,
-                                );
-                                const level = getScoreLevel(score);
-                                const isActive = previewDocId === doc.id;
-                                return (
-                                    <div
-                                        key={doc.id}
-                                        className={`tx-modal__picker-row${isActive ? ' tx-modal__picker-row--active' : ''}`}
-                                        onClick={() => handlePreview(doc.id, doc.filename)}
-                                    >
-                                        <ScoreCircle score={score} level={level} />
-                                        <div className="tx-modal__picker-info">
-                                            <span className="tx-modal__picker-name" title={doc.filename}>
-                                                {doc.filename}
-                                                {isAdded && <span className="tx-modal__badge-added">{t('docAdded')}</span>}
-                                            </span>
-                                            <span className="tx-modal__picker-meta">
-                                                {getDocVendor(doc) || '-'} · {fmtCurrency(getDocAmount(doc), getDocCurrency(doc) || currency)}
-                                            </span>
-                                        </div>
-                                        {isAdded ? (
-                                            <span className="tx-modal__picker-check">&#10003;</span>
-                                        ) : (
-                                            <button
-                                                className="tx-modal__picker-link"
-                                                onClick={e => { e.stopPropagation(); handleLink(doc.id); }}
-                                                disabled={linking}
+                        <div className="tx-modal__picker-table-wrap">
+                            <table className="tx-modal__picker-table">
+                                <thead>
+                                    <tr>
+                                        <th>{t('pickerDate')}</th>
+                                        <th>{t('pickerAmount')}</th>
+                                        <th>{t('pickerCurrency')}</th>
+                                        <th>{t('pickerSupplier')}</th>
+                                        <th></th>
+                                    </tr>
+                                    <tr className="tx-modal__picker-filter-row">
+                                        <th><input type="text" placeholder="..." value={colFilters.date || ''} onChange={e => handleColFilter('date', e.target.value)} /></th>
+                                        <th><input type="text" placeholder="..." value={colFilters.amount || ''} onChange={e => handleColFilter('amount', e.target.value)} /></th>
+                                        <th><input type="text" placeholder="..." value={colFilters.currency || ''} onChange={e => handleColFilter('currency', e.target.value)} /></th>
+                                        <th><input type="text" placeholder="..." value={colFilters.supplier || ''} onChange={e => handleColFilter('supplier', e.target.value)} /></th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {pickerDocsState.length === 0 && !pickerLoading && (
+                                        <tr><td colSpan={5} className="tx-modal__picker-empty">{t('noDocumentsAvailable')}</td></tr>
+                                    )}
+                                    {pickerDocsState.map(doc => {
+                                        const isAdded = addedIds.has(doc.id);
+                                        const isActive = previewDocId === doc.id;
+                                        const ed = doc.extracted_data;
+                                        return (
+                                            <tr
+                                                key={doc.id}
+                                                className={`tx-modal__picker-trow${isActive ? ' tx-modal__picker-trow--active' : ''}`}
+                                                onClick={() => handlePreview(doc.id, doc.filename)}
                                             >
-                                                {t('linkButton')}
-                                            </button>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                                <td>{ed?.invoice_date || '-'}</td>
+                                                <td>{fmtCurrency(getDocAmount(doc), getDocCurrency(doc) || currency)}</td>
+                                                <td>{ed?.financials?.currency || ed?.currency || '-'}</td>
+                                                <td title={ed?.supplier_name || '-'}>{ed?.supplier_name || '-'}</td>
+                                                <td className="tx-modal__picker-td-action">
+                                                    {isAdded ? (
+                                                        <span className="tx-modal__picker-check">&#10003;</span>
+                                                    ) : (
+                                                        <button
+                                                            className="tx-modal__picker-link"
+                                                            onClick={e => { e.stopPropagation(); handleLink(doc.id); }}
+                                                            disabled={linking}
+                                                        >
+                                                            {t('linkButton')}
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
                         <div className="tx-modal__picker-footer">
-                            {!showAll ? (
-                                <button className="tx-modal__show-all-btn" onClick={() => setShowAll(true)}>
-                                    {t('showAllDocs')}
+                            {pickerLoading && (
+                                <div className="tx-modal__picker-loading">{t('loadingDocs')}</div>
+                            )}
+                            {pickerHasMore && !pickerLoading && (
+                                <button
+                                    className="tx-modal__show-all-btn"
+                                    onClick={() => fetchPickerDocs(pickerPage + 1, debouncedSearch, debouncedColFilters, true)}
+                                    disabled={pickerLoading}
+                                >
+                                    {t('more')}
                                 </button>
-                            ) : (
-                                <div className="tx-modal__range-bar">
-                                    <span className="tx-modal__range-label">{t('dateRange')}: {maxDays} {t('days')}</span>
-                                    <input type="range" className="tx-modal__range-slider"
-                                        min={30} max={730} step={30} value={maxDays}
-                                        onChange={e => setMaxDays(+e.target.value)} />
-                                    <button className="tx-modal__range-reset" onClick={() => { setShowAll(false); setMaxDays(365); }}>
-                                        &times;
-                                    </button>
-                                </div>
                             )}
                         </div>
                     </div>

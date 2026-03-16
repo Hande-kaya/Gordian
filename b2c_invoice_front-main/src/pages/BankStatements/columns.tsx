@@ -5,15 +5,10 @@
 import React from 'react';
 import { Column } from '../../shared/components';
 
-const formatDateValue = (value: string): string => {
-    if (!value) return '-';
-    const d = new Date(value);
-    return isNaN(d.getTime()) ? value : d.toLocaleDateString('tr-TR');
-};
-
 export function getBankStatementColumns(
     formatCurrency: (amount?: number, currency?: string) => string,
     t: (key: string) => string,
+    fmtDate: (value: string | Date | null | undefined) => string,
 ): Column[] {
     return [
         {
@@ -60,7 +55,7 @@ export function getBankStatementColumns(
                 const start = row.statement_period_start;
                 const end = row.statement_period_end;
                 if (!start && !end) return '-';
-                return `${start || '?'} — ${end || '?'}`;
+                return `${start ? fmtDate(start) : '?'} — ${end ? fmtDate(end) : '?'}`;
             },
         },
         {
@@ -115,7 +110,7 @@ export function getBankStatementColumns(
             type: 'date',
             sortable: true,
             width: '100px',
-            render: (value: string) => formatDateValue(value),
+            render: (value: string) => fmtDate(value),
         },
     ];
 }
