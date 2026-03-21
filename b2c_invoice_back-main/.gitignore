@@ -1,18 +1,16 @@
-# Environment
 .env
+.env.local
+.env.*.local
+.venv/
 venv/
 __pycache__/
 *.pyc
-
-# Credentials - NEVER commit!
+*.pyo
+.idea/
+*.log
+instance/
 credentials/
 *.json
 !package.json
-
-# Uploads
 uploads/
-
-# IDE
 .vscode/
-.idea/
-**/.DS_Store

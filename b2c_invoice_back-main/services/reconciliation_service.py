@@ -93,33 +93,8 @@ def _apply_column_filters(enriched: list, filters: Dict[str, Any]) -> list:
         q = str(query).lower().strip()
         if not q:
             continue
-        # Support range matching for date filter: "YYYY-MM..YYYY-MM"
-        if key == 'date' and '..' in q:
-            parts = q.split('..')
-            range_from = parts[0].strip() if len(parts) > 0 else ''
-            range_to = parts[1].strip() if len(parts) > 1 else ''
-            def _date_in_range(tx):
-                d = _get_field(tx, 'date')
-                # Extract YYYY-MM from date string (supports DD.MM.YYYY, YYYY-MM-DD, MM/DD/YYYY etc.)
-                import re
-                # Try to find a year-month pattern
-                m1 = re.search(r'(\d{4})-(\d{1,2})', d)  # YYYY-MM-DD
-                m2 = re.search(r'(\d{1,2})[./](\d{1,2})[./](\d{4})', d)  # DD.MM.YYYY or MM/DD/YYYY
-                ym = None
-                if m1:
-                    ym = f"{m1.group(1)}-{m1.group(2).zfill(2)}"
-                elif m2:
-                    ym = f"{m2.group(3)}-{m2.group(2).zfill(2)}"
-                if not ym:
-                    return False
-                if range_from and ym < range_from:
-                    return False
-                if range_to and ym > range_to:
-                    return False
-                return True
-            result = [e for e in result if _date_in_range(e)]
         # Support comma-separated OR matching for date filter (multi-month)
-        elif key == 'date' and ',' in q:
+        if key == 'date' and ',' in q:
             parts = [p.strip() for p in q.split(',') if p.strip()]
             result = [
                 e for e in result

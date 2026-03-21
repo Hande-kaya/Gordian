@@ -2,7 +2,7 @@
 Auth Account Routes - Protected account management endpoints.
 
 Extracted from auth.py to keep file sizes under 500 lines.
-Endpoints: profile update, change password, me, set-password, logout.
+Endpoints: profile update, change password, me, set-password, logout, delete-account.
 """
 
 from datetime import datetime
@@ -19,7 +19,6 @@ from utils.jwt_helper import create_access_token
 from utils.cookie_helper import json_with_cookie, clear_auth_cookie
 from routes.auth import _build_token_payload
 
-# Lazy getter to avoid import-time circular dependency
 def _get_blacklist_collection():
     return get_collection('token_blacklist')
 
@@ -66,7 +65,6 @@ class UpdateProfile(Resource):
         updates['updated_at'] = datetime.utcnow()
         users.update_one({'_id': user_oid}, {'$set': updates})
 
-        # Issue new token with updated info via httpOnly cookie
         updated_user = users.find_one({'_id': user_oid})
         company_id = updated_user.get('company_id')
         token_data = _build_token_payload(updated_user, company_id)
@@ -176,7 +174,6 @@ class SetPassword(Resource):
         if not user:
             return {'success': False, 'message': 'User not found'}, 404
 
-        # Only allow if user has no password yet
         if user.get('has_password', bool(user.get('password_hash'))):
             return {'success': False, 'message': 'Password already set. Use change-password instead.'}, 400
 
@@ -212,12 +209,83 @@ class Logout(Resource):
             return resp
 
         blacklist = _get_blacklist_collection()
-        if blacklist is not None:  # pymongo 4.x: use `is not None` not bool()
+        if blacklist is not None:
             blacklist.insert_one({
                 'jti': jti,
                 'expires_at': datetime.utcfromtimestamp(exp) if exp else datetime.utcnow(),
             })
 
         resp = make_response(jsonify({'success': True, 'message': 'Logged out successfully'}), 200)
+        clear_auth_cookie(resp)
+        return resp
+
+
+def _generate_deleted_email(users, original_email: str) -> str:
+    """Generate a unique suffixed email for a soft-deleted account.
+    e.g. user@gmail.com -> user@gmail.com-old -> user@gmail.com-old2 -> ...
+    """
+    candidate = f"{original_email}-old"
+    counter = 1
+    while users.find_one({'email': candidate}):
+        counter += 1
+        candidate = f"{original_email}-old{counter}"
+    return candidate
+
+
+def _blacklist_token(token_data: dict) -> None:
+    """Add the current JWT to the blacklist collection."""
+    jti = token_data.get('jti')
+    exp = token_data.get('exp')
+    if not jti:
+        return
+    blacklist = _get_blacklist_collection()
+    if blacklist is not None:
+        blacklist.insert_one({
+            'jti': jti,
+            'expires_at': datetime.utcfromtimestamp(exp) if exp else datetime.utcnow(),
+        })
+
+
+# DELETE /api/auth/account
+@auth_account_ns.route('/account')
+class DeleteAccount(Resource):
+    @token_required
+    def delete(self):
+        """Soft-delete the current user's account.
+        Renames email with -old suffix, marks inactive, blacklists token.
+        """
+        data = request.get_json() or {}
+        if data.get('confirmation') != 'delete':
+            return {'success': False, 'message': 'Type "delete" to confirm account deletion'}, 400
+
+        current = request.current_user
+        try:
+            user_oid = ObjectId(current['user_id'])
+        except Exception:
+            return {'success': False, 'message': 'Invalid user'}, 400
+
+        users = get_collection('users')
+        user = users.find_one({'_id': user_oid})
+        if not user:
+            return {'success': False, 'message': 'User not found'}, 404
+
+        original_email = user['email']
+        deleted_email = _generate_deleted_email(users, original_email)
+
+        users.update_one({'_id': user_oid}, {'$set': {
+            'is_active': False,
+            'is_deleted': True,
+            'deleted_at': datetime.utcnow(),
+            'email': deleted_email,
+            'original_email': original_email,
+            'updated_at': datetime.utcnow(),
+        }})
+
+        _blacklist_token(request.current_user_token)
+
+        resp = make_response(jsonify({
+            'success': True,
+            'message': 'Account deleted successfully',
+        }), 200)
         clear_auth_cookie(resp)
         return resp
